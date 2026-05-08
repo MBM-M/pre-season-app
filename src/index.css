@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-950 text-white antialiased;
+  }
+}
+
+@layer utilities {
+  .pitch-green {
+    @apply text-emerald-400;
+  }
+  .pitch-green-bg {
+    @apply bg-emerald-400;
+  }
+}

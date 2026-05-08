@@ -1,0 +1,211 @@
+import { motion } from 'framer-motion';
+import { OnboardingData } from '@/types/onboarding';
+import { Button } from '@/components/ui/Button';
+import {
+  REGIONS,
+  FITNESS_LEVELS,
+  GOAL_OPTIONS,
+  EQUIPMENT_OPTIONS,
+  INJURY_OPTIONS,
+  FOOTBALL_POSITIONS,
+} from '@/types/onboarding';
+import { isPremium } from '@/lib/premium';
+
+interface DashboardProps {
+  userData: OnboardingData;
+  email: string;
+  onGeneratePlan: () => void;
+  onGenerateAIPlan: () => void;
+  isGeneratingAI?: boolean;
+}
+
+export const Dashboard = ({
+  userData,
+  email,
+  onGeneratePlan,
+  onGenerateAIPlan,
+  isGeneratingAI = false,
+}: DashboardProps) => {
+  const premium = isPremium();
+  const goalInfo = GOAL_OPTIONS.find(g => g.value === userData.goal);
+  const positionInfo = FOOTBALL_POSITIONS.find(p => p.value === userData.position);
+  const regionInfo = REGIONS.find(r => r.value === userData.region);
+  const fitnessInfo = FITNESS_LEVELS.find(f => f.value === userData.fitnessLevel);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="w-full max-w-4xl mx-auto px-4"
+    >
+      {/* Header */}
+      <div className="text-center mb-10">
+        <motion.h1
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="text-5xl font-bold mb-4"
+        >
+          Welcome to Pre-Season
+        </motion.h1>
+        <motion.p
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="text-gray-400"
+        >
+          {email}
+        </motion.p>
+      </div>
+
+      {/* Stats Overview */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+      >
+        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">📅</span>
+            <span className="text-gray-400 text-sm">Duration</span>
+          </div>
+          <div className="text-3xl font-bold text-emerald-400">{userData.weeksAvailable}</div>
+          <div className="text-sm text-gray-400">weeks</div>
+        </div>
+
+        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">📆</span>
+            <span className="text-gray-400 text-sm">Frequency</span>
+          </div>
+          <div className="text-3xl font-bold text-cyan-400">{userData.daysPerWeek}</div>
+          <div className="text-sm text-gray-400">days per week</div>
+        </div>
+
+        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">{goalInfo?.emoji || '🎯'}</span>
+            <span className="text-gray-400 text-sm">Goal</span>
+          </div>
+          <div className="text-xl font-bold text-purple-400 truncate">{goalInfo?.label}</div>
+        </div>
+      </motion.div>
+
+      {/* Details Grid */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"
+      >
+        {/* Position */}
+        {positionInfo && (
+          <div className="bg-gray-800/30 rounded-xl p-5 border border-gray-700/30">
+            <div className="text-sm text-gray-400 mb-1">Position</div>
+            <div className="text-lg font-semibold">{positionInfo.label}</div>
+          </div>
+        )}
+
+        {/* Fitness Level */}
+        <div className="bg-gray-800/30 rounded-xl p-5 border border-gray-700/30">
+          <div className="text-sm text-gray-400 mb-1">Fitness Level</div>
+          <div className="text-lg font-semibold">{fitnessInfo?.label}</div>
+        </div>
+
+        {/* Region */}
+        <div className="bg-gray-800/30 rounded-xl p-5 border border-gray-700/30">
+          <div className="text-sm text-gray-400 mb-1">Region</div>
+          <div className="text-lg font-semibold">{regionInfo?.label}</div>
+        </div>
+
+        {/* Injury Status */}
+        <div className="bg-gray-800/30 rounded-xl p-5 border border-gray-700/30">
+          <div className="text-sm text-gray-400 mb-1">Injury Status</div>
+          <div className="text-lg font-semibold">
+            {INJURY_OPTIONS.find(i => i.value === userData.injury)?.label}
+          </div>
+          {userData.injuryDetails && (
+            <div className="text-sm text-gray-400 mt-1">{userData.injuryDetails}</div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Equipment */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="bg-gray-800/30 rounded-xl p-5 border border-gray-700/30 mb-8"
+      >
+        <div className="text-sm text-gray-400 mb-3">Available Equipment</div>
+        <div className="flex flex-wrap gap-2">
+          {userData.equipment.map(eq => {
+            const eqInfo = EQUIPMENT_OPTIONS.find(e => e.value === eq);
+            return (
+              <div
+                key={eq}
+                className="bg-gray-700/50 px-4 py-2 rounded-lg flex items-center gap-2"
+              >
+                <span>{eqInfo?.emoji}</span>
+                <span className="text-sm">{eqInfo?.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {/* Generate Plan Buttons */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="flex flex-col items-center gap-4"
+      >
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <Button
+            variant="primary"
+            onClick={onGeneratePlan}
+            disabled={isGeneratingAI}
+            className="text-lg px-10 py-4"
+          >
+            Generate Plan 🚀
+          </Button>
+
+          <button
+            onClick={onGenerateAIPlan}
+            disabled={isGeneratingAI}
+            className={[
+              'text-lg px-10 py-4 rounded-xl font-semibold transition relative overflow-hidden',
+              'border',
+              premium
+                ? 'bg-gradient-to-br from-purple-600 to-cyan-500 border-transparent text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40'
+                : 'bg-gray-800/60 border-gray-700 text-gray-300 hover:bg-gray-800',
+              isGeneratingAI ? 'opacity-70 cursor-not-allowed' : '',
+            ].join(' ')}
+          >
+            {isGeneratingAI ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="inline-block w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                Generating with AI…
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <span>✨ Generate AI Plan</span>
+                {!premium && (
+                  <span className="text-xs uppercase tracking-wide bg-purple-500/30 text-purple-200 border border-purple-400/40 px-2 py-0.5 rounded-full">
+                    Premium
+                  </span>
+                )}
+              </span>
+            )}
+          </button>
+        </div>
+        <p className="text-gray-500 text-sm text-center max-w-xl">
+          The free plan uses a periodized template tuned to your inputs. The AI
+          plan is generated by Claude with deeper personalization to your
+          position, injuries, and equipment.
+        </p>
+      </motion.div>
+    </motion.div>
+  );
+};
