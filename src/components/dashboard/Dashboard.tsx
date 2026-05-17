@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
 import { OnboardingData } from '@/types/onboarding';
 import { Button } from '@/components/ui/Button';
 import {
@@ -10,6 +11,8 @@ import {
   FOOTBALL_POSITIONS,
 } from '@/types/onboarding';
 import { isPremium } from '@/lib/premium';
+import { TrainingPlan } from '@/lib/planGenerator';
+import { getCompletions } from '@/lib/database';
 
 interface DashboardProps {
   userData: OnboardingData;
@@ -17,6 +20,9 @@ interface DashboardProps {
   onGeneratePlan: () => void;
   onGenerateAIPlan: () => void;
   isGeneratingAI?: boolean;
+  planId?: string | null;
+  plan?: TrainingPlan | null;
+  onViewPlan?: () => void;
 }
 
 export const Dashboard = ({
@@ -25,12 +31,41 @@ export const Dashboard = ({
   onGeneratePlan,
   onGenerateAIPlan,
   isGeneratingAI = false,
+  planId = null,
+  plan = null,
+  onViewPlan,
 }: DashboardProps) => {
   const premium = isPremium();
   const goalInfo = GOAL_OPTIONS.find(g => g.value === userData.goal);
   const positionInfo = FOOTBALL_POSITIONS.find(p => p.value === userData.position);
   const regionInfo = REGIONS.find(r => r.value === userData.region);
   const fitnessInfo = FITNESS_LEVELS.find(f => f.value === userData.fitnessLevel);
+
+  const [completedCount, setCompletedCount] = useState(0);
+
+  useEffect(() => {
+    // No plan → widget doesn't render anyway; initial useState(0) is correct.
+    if (!planId) return;
+    let cancelled = false;
+    getCompletions(planId)
+      .then((rows) => {
+        if (!cancelled) setCompletedCount(rows.length);
+      })
+      .catch((err) => {
+        console.error('Error loading completions for dashboard widget:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [planId]);
+
+  const totalSessions = useMemo(
+    () => (plan ? plan.weeks.reduce((s, w) => s + w.sessions.length, 0) : 0),
+    [plan]
+  );
+  const completionPct = totalSessions
+    ? Math.round((completedCount / totalSessions) * 100)
+    : 0;
 
   return (
     <motion.div
@@ -56,6 +91,46 @@ export const Dashboard = ({
           {email}
         </motion.p>
       </div>
+
+      {/* Progress widget — only shown when there's a saved plan */}
+      {plan && planId && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.15 }}
+          className="mb-8 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-xl border border-emerald-500/30 p-6"
+        >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-1">
+              <div className="text-sm uppercase tracking-wide text-emerald-300 mb-1">
+                Your plan
+              </div>
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-4xl font-bold text-emerald-400">
+                  {completedCount}
+                </span>
+                <span className="text-gray-300 text-sm">
+                  of {totalSessions} sessions complete
+                </span>
+                <span className="ml-2 text-xs text-gray-400">({completionPct}%)</span>
+              </div>
+              <div className="h-2 bg-gray-800 rounded-full overflow-hidden max-w-md">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${completionPct}%` }}
+                  transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                  className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400"
+                />
+              </div>
+            </div>
+            {onViewPlan && (
+              <Button variant="primary" onClick={onViewPlan} className="shrink-0">
+                View plan →
+              </Button>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Stats Overview */}
       <motion.div

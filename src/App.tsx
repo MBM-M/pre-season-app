@@ -8,7 +8,12 @@ import { TrainingPlanDisplay } from '@/components/dashboard/TrainingPlan';
 import { Settings } from '@/components/settings/Settings';
 import { Header, HeaderScreen } from '@/components/layout/Header';
 import { OnboardingData } from '@/types/onboarding';
-import { saveUserPreferences, saveTrainingPlan, getUserPreferences } from '@/lib/database';
+import {
+  saveUserPreferences,
+  saveTrainingPlan,
+  getUserPreferences,
+  getLatestPlan,
+} from '@/lib/database';
 import { generateTrainingPlan, TrainingPlan as GeneratedPlan } from '@/lib/planGenerator';
 import { generateAITrainingPlan } from '@/lib/aiPlanGenerator';
 import { isPremium } from '@/lib/premium';
@@ -36,6 +41,7 @@ function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('onboarding');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [isCheckingPendingData, setIsCheckingPendingData] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
@@ -74,6 +80,7 @@ function App() {
     if (!isSignedIn) {
       setOnboardingData(null);
       setGeneratedPlan(null);
+      setCurrentPlanId(null);
       if (
         currentScreen === 'dashboard' ||
         currentScreen === 'training-plan' ||
@@ -109,10 +116,11 @@ function App() {
       }
     }
 
-    // 2) Otherwise, fetch existing preferences and route accordingly.
+    // 2) Otherwise, fetch existing preferences (and the latest saved plan, so
+    //    a returning user's tracking state is restored on reload).
     setIsCheckingPendingData(true);
-    getUserPreferences(user.id)
-      .then((existing) => {
+    Promise.all([getUserPreferences(user.id), getLatestPlan(user.id)])
+      .then(([existing, latestPlan]) => {
         if (existing) {
           setOnboardingData(existing);
           // Land on dashboard whenever we just signed in / page loaded with prefs.
@@ -123,6 +131,10 @@ function App() {
           ) {
             setCurrentScreen('dashboard');
           }
+        }
+        if (latestPlan) {
+          setGeneratedPlan(latestPlan.planData as GeneratedPlan);
+          setCurrentPlanId(latestPlan.id);
         }
       })
       .catch((err) => {
@@ -154,11 +166,20 @@ function App() {
     await persistOnboarding(onboardingData);
   };
 
-  const handleGeneratePlan = () => {
-    if (!onboardingData) return;
+  const handleGeneratePlan = async () => {
+    if (!onboardingData || !user) return;
     const plan = generateTrainingPlan(onboardingData);
     setGeneratedPlan(plan);
     setCurrentScreen('training-plan');
+    // Auto-save so we have a plan_id to anchor workout-completion tracking.
+    // A save failure shouldn't block viewing the plan — surface a soft warning.
+    try {
+      const saved = await saveTrainingPlan(user.id, plan, false);
+      setCurrentPlanId(saved.id);
+    } catch (err) {
+      console.error('Error auto-saving plan:', err);
+      toast.error("Generated plan, but couldn't save it for tracking. Refresh and try again.");
+    }
   };
 
   const handleGenerateAIPlan = async () => {
@@ -175,23 +196,21 @@ function App() {
       const plan = await generateAITrainingPlan(onboardingData);
       setGeneratedPlan(plan);
       setCurrentScreen('training-plan');
+      if (user) {
+        try {
+          const saved = await saveTrainingPlan(user.id, plan, true);
+          setCurrentPlanId(saved.id);
+        } catch (saveErr) {
+          console.error('Error auto-saving AI plan:', saveErr);
+          toast.error("Generated plan, but couldn't save it for tracking. Refresh and try again.");
+        }
+      }
     } catch (err) {
       console.error('Error generating AI plan:', err);
       const msg = err instanceof Error ? err.message : 'Failed to generate AI plan.';
       toast.error(msg);
     } finally {
       setIsGeneratingAI(false);
-    }
-  };
-
-  const handleSavePlan = async () => {
-    if (!generatedPlan || !user || !onboardingData) return;
-    try {
-      await saveTrainingPlan(user.id, generatedPlan, false);
-      toast.success('Training plan saved');
-    } catch (err) {
-      console.error('Error saving plan:', err);
-      toast.error('Failed to save plan. Please try again.');
     }
   };
 
@@ -226,12 +245,10 @@ function App() {
   };
 
   const handleHeaderNavigate = (screen: HeaderScreen) => {
-    if (screen === 'training-plan') {
-      // Generate fresh plan on demand if we don't have one yet.
-      if (!generatedPlan && onboardingData) {
-        const plan = generateTrainingPlan(onboardingData);
-        setGeneratedPlan(plan);
-      }
+    if (screen === 'training-plan' && !generatedPlan && onboardingData) {
+      // No plan loaded yet — generate and auto-save in one shot.
+      void handleGeneratePlan();
+      return;
     }
     setCurrentScreen(screen);
   };
@@ -318,6 +335,9 @@ function App() {
             onGeneratePlan={handleGeneratePlan}
             onGenerateAIPlan={handleGenerateAIPlan}
             isGeneratingAI={isGeneratingAI}
+            planId={currentPlanId}
+            plan={generatedPlan}
+            onViewPlan={() => setCurrentScreen('training-plan')}
           />
         </div>
       </div>
@@ -329,7 +349,11 @@ function App() {
       <div className={PAGE_BG}>
         <Header currentScreen="training-plan" onNavigate={handleHeaderNavigate} />
         <div className="py-10">
-          <TrainingPlanDisplay plan={generatedPlan} onSavePlan={handleSavePlan} />
+          <TrainingPlanDisplay
+            plan={generatedPlan}
+            planId={currentPlanId}
+            clerkUserId={user.id}
+          />
         </div>
       </div>
     );
@@ -343,8 +367,10 @@ function App() {
           initialData={onboardingData}
           onSaved={(updated) => {
             setOnboardingData(updated);
-            // Re-generate plan from new prefs next time it's viewed.
+            // Settings changed — drop the cached plan so it re-generates from
+            // the new prefs (and re-saves) next time the user views it.
             setGeneratedPlan(null);
+            setCurrentPlanId(null);
             setCurrentScreen('dashboard');
           }}
           onCancel={() => setCurrentScreen('dashboard')}

@@ -42,6 +42,22 @@ function rowToOnboardingData(row: UserPreferencesRow): OnboardingData {
   };
 }
 
+/** Look up the Supabase users.id (UUID) for a given Clerk user id (string).
+ *  All other helpers consume this — pulled out so we have one definition. */
+async function getUserIdByClerk(clerkId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id')
+    .eq('clerk_id', clerkId)
+    .maybeSingle();
+  if (error) {
+    console.error('Error looking up user by clerk_id:', error);
+    throw error;
+  }
+  if (!data) throw new Error('User not found');
+  return data.id as string;
+}
+
 export async function saveUserPreferences(
   clerkId: string,
   email: string,
@@ -113,26 +129,44 @@ export async function getUserPreferences(clerkId: string): Promise<OnboardingDat
   return rowToOnboardingData(data as UserPreferencesRow);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Training plans
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SavedPlan {
+  id: string;
+  planData: unknown;
+  isPremium: boolean;
+  createdAt: string;
+}
+
+interface TrainingPlanRow {
+  id: string;
+  plan_data: unknown;
+  is_premium: boolean;
+  created_at: string;
+}
+
+function rowToSavedPlan(row: TrainingPlanRow): SavedPlan {
+  return {
+    id: row.id,
+    planData: row.plan_data,
+    isPremium: row.is_premium,
+    createdAt: row.created_at,
+  };
+}
+
 export async function saveTrainingPlan(
   clerkId: string,
   planData: unknown,
   isPremium: boolean = false
-) {
-  // Get user ID from clerk ID
-  const { data: user, error: userLookupError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('clerk_id', clerkId)
-    .single();
-
-  if (userLookupError || !user) {
-    throw new Error('User not found');
-  }
+): Promise<SavedPlan> {
+  const userId = await getUserIdByClerk(clerkId);
 
   const { data, error } = await supabase
     .from('training_plans')
     .insert({
-      user_id: user.id,
+      user_id: userId,
       plan_data: planData,
       is_premium: isPremium,
     })
@@ -144,5 +178,115 @@ export async function saveTrainingPlan(
     throw error;
   }
 
-  return data;
+  return rowToSavedPlan(data as TrainingPlanRow);
+}
+
+/** Return the user's most recent saved plan, or null if they have none. */
+export async function getLatestPlan(clerkId: string): Promise<SavedPlan | null> {
+  let userId: string;
+  try {
+    userId = await getUserIdByClerk(clerkId);
+  } catch {
+    // No user row yet (e.g. brand-new account before onboarding save)
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('training_plans')
+    .select('id, plan_data, is_premium, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching latest plan:', error);
+    throw error;
+  }
+
+  return data ? rowToSavedPlan(data as TrainingPlanRow) : null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Workout completions
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SessionCompletion {
+  weekNumber: number;
+  day: number;
+  completedAt: string;
+}
+
+interface CompletionRow {
+  week_number: number;
+  day: number;
+  completed_at: string;
+}
+
+export async function markSessionComplete(
+  clerkId: string,
+  planId: string,
+  weekNumber: number,
+  day: number
+): Promise<void> {
+  const userId = await getUserIdByClerk(clerkId);
+
+  const { error } = await supabase.from('workout_completions').upsert(
+    {
+      user_id: userId,
+      plan_id: planId,
+      week_number: weekNumber,
+      day,
+      completed_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,plan_id,week_number,day' }
+  );
+
+  if (error) {
+    console.error('Error marking session complete:', error);
+    throw error;
+  }
+}
+
+export async function unmarkSessionComplete(
+  clerkId: string,
+  planId: string,
+  weekNumber: number,
+  day: number
+): Promise<void> {
+  const userId = await getUserIdByClerk(clerkId);
+
+  const { error } = await supabase
+    .from('workout_completions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('plan_id', planId)
+    .eq('week_number', weekNumber)
+    .eq('day', day);
+
+  if (error) {
+    console.error('Error unmarking session:', error);
+    throw error;
+  }
+}
+
+export async function getCompletions(planId: string): Promise<SessionCompletion[]> {
+  const { data, error } = await supabase
+    .from('workout_completions')
+    .select('week_number, day, completed_at')
+    .eq('plan_id', planId);
+
+  if (error) {
+    console.error('Error fetching completions:', error);
+    throw error;
+  }
+
+  return (data ?? []).map((row) => {
+    const r = row as CompletionRow;
+    return {
+      weekNumber: r.week_number,
+      day: r.day,
+      completedAt: r.completed_at,
+    };
+  });
 }
