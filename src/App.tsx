@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser, SignIn, SignUp } from '@clerk/clerk-react';
 import { Onboarding } from '@/components/onboarding/Onboarding';
+import { Landing } from '@/components/landing/Landing';
 import { Confirmation } from '@/components/onboarding/Confirmation';
 import { ImprovementVision } from '@/components/onboarding/ImprovementVision';
 import { Dashboard } from '@/components/dashboard/Dashboard';
@@ -23,6 +24,7 @@ import './App.css';
 const ONBOARDING_STORAGE_KEY = 'pending_onboarding_data';
 
 type Screen =
+  | 'landing'
   | 'onboarding'
   | 'vision'
   | 'signin'
@@ -38,7 +40,7 @@ function App() {
   const { isSignedIn, user, isLoaded } = useUser();
   const toast = useToast();
 
-  const [currentScreen, setCurrentScreen] = useState<Screen>('onboarding');
+  const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
@@ -76,7 +78,7 @@ function App() {
   useEffect(() => {
     if (!isLoaded) return;
 
-    // Signed-out: drop back to onboarding if we're on a protected screen.
+    // Signed-out: drop back to the public landing if we're on a protected screen.
     if (!isSignedIn) {
       setOnboardingData(null);
       setGeneratedPlan(null);
@@ -87,7 +89,7 @@ function App() {
         currentScreen === 'settings' ||
         currentScreen === 'confirmation'
       ) {
-        setCurrentScreen('onboarding');
+        setCurrentScreen('landing');
       }
       return;
     }
@@ -125,6 +127,7 @@ function App() {
           setOnboardingData(existing);
           // Land on dashboard whenever we just signed in / page loaded with prefs.
           if (
+            currentScreen === 'landing' ||
             currentScreen === 'onboarding' ||
             currentScreen === 'signin' ||
             currentScreen === 'signup'
@@ -259,6 +262,16 @@ function App() {
       <div className={`${PAGE_BG} flex items-center justify-center`}>
         <div className="text-emerald-400 text-2xl">Loading...</div>
       </div>
+    );
+  }
+
+  // ---------- Public landing page ----------
+  if (currentScreen === 'landing') {
+    return (
+      <Landing
+        onGetStarted={() => setCurrentScreen('onboarding')}
+        onSignIn={() => setCurrentScreen('signin')}
+      />
     );
   }
 
