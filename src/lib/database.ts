@@ -138,6 +138,8 @@ export interface SavedPlan {
   planData: unknown;
   isPremium: boolean;
   createdAt: string;
+  /** When the user activated this plan; drives "today's workout" derivation. */
+  startedAt: string;
 }
 
 interface TrainingPlanRow {
@@ -145,6 +147,7 @@ interface TrainingPlanRow {
   plan_data: unknown;
   is_premium: boolean;
   created_at: string;
+  started_at: string;
 }
 
 function rowToSavedPlan(row: TrainingPlanRow): SavedPlan {
@@ -153,6 +156,7 @@ function rowToSavedPlan(row: TrainingPlanRow): SavedPlan {
     planData: row.plan_data,
     isPremium: row.is_premium,
     createdAt: row.created_at,
+    startedAt: row.started_at,
   };
 }
 
@@ -193,7 +197,7 @@ export async function getLatestPlan(clerkId: string): Promise<SavedPlan | null> 
 
   const { data, error } = await supabase
     .from('training_plans')
-    .select('id, plan_data, is_premium, created_at')
+    .select('id, plan_data, is_premium, created_at, started_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)

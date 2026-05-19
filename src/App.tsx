@@ -44,6 +44,7 @@ function App() {
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
+  const [currentPlanStartedAt, setCurrentPlanStartedAt] = useState<string | null>(null);
   const [isCheckingPendingData, setIsCheckingPendingData] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
@@ -83,6 +84,7 @@ function App() {
       setOnboardingData(null);
       setGeneratedPlan(null);
       setCurrentPlanId(null);
+      setCurrentPlanStartedAt(null);
       if (
         currentScreen === 'dashboard' ||
         currentScreen === 'training-plan' ||
@@ -138,6 +140,7 @@ function App() {
         if (latestPlan) {
           setGeneratedPlan(latestPlan.planData as GeneratedPlan);
           setCurrentPlanId(latestPlan.id);
+          setCurrentPlanStartedAt(latestPlan.startedAt);
         }
       })
       .catch((err) => {
@@ -179,6 +182,7 @@ function App() {
     try {
       const saved = await saveTrainingPlan(user.id, plan, false);
       setCurrentPlanId(saved.id);
+      setCurrentPlanStartedAt(saved.startedAt);
     } catch (err) {
       console.error('Error auto-saving plan:', err);
       toast.error("Generated plan, but couldn't save it for tracking. Refresh and try again.");
@@ -203,6 +207,7 @@ function App() {
         try {
           const saved = await saveTrainingPlan(user.id, plan, true);
           setCurrentPlanId(saved.id);
+          setCurrentPlanStartedAt(saved.startedAt);
         } catch (saveErr) {
           console.error('Error auto-saving AI plan:', saveErr);
           toast.error("Generated plan, but couldn't save it for tracking. Refresh and try again.");
@@ -350,6 +355,7 @@ function App() {
             isGeneratingAI={isGeneratingAI}
             planId={currentPlanId}
             plan={generatedPlan}
+            planStartedAt={currentPlanStartedAt}
             onViewPlan={() => setCurrentScreen('training-plan')}
           />
         </div>
@@ -384,6 +390,7 @@ function App() {
             // the new prefs (and re-saves) next time the user views it.
             setGeneratedPlan(null);
             setCurrentPlanId(null);
+            setCurrentPlanStartedAt(null);
             setCurrentScreen('dashboard');
           }}
           onCancel={() => setCurrentScreen('dashboard')}

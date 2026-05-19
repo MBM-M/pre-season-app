@@ -13,6 +13,7 @@ import {
 import { isPremium } from '@/lib/premium';
 import { TrainingPlan } from '@/lib/planGenerator';
 import { getCompletions } from '@/lib/database';
+import { getPlanProgress } from '@/lib/planSchedule';
 
 interface DashboardProps {
   userData: OnboardingData;
@@ -22,6 +23,7 @@ interface DashboardProps {
   isGeneratingAI?: boolean;
   planId?: string | null;
   plan?: TrainingPlan | null;
+  planStartedAt?: string | null;
   onViewPlan?: () => void;
 }
 
@@ -33,6 +35,7 @@ export const Dashboard = ({
   isGeneratingAI = false,
   planId = null,
   plan = null,
+  planStartedAt = null,
   onViewPlan,
 }: DashboardProps) => {
   const premium = isPremium();
@@ -41,15 +44,16 @@ export const Dashboard = ({
   const regionInfo = REGIONS.find(r => r.value === userData.region);
   const fitnessInfo = FITNESS_LEVELS.find(f => f.value === userData.fitnessLevel);
 
-  const [completedCount, setCompletedCount] = useState(0);
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // No plan → widget doesn't render anyway; initial useState(0) is correct.
+    // No plan → widget doesn't render anyway; initial useState() is correct.
     if (!planId) return;
     let cancelled = false;
     getCompletions(planId)
       .then((rows) => {
-        if (!cancelled) setCompletedCount(rows.length);
+        if (cancelled) return;
+        setCompleted(new Set(rows.map((r) => `${r.weekNumber}-${r.day}`)));
       })
       .catch((err) => {
         console.error('Error loading completions for dashboard widget:', err);
@@ -63,9 +67,17 @@ export const Dashboard = ({
     () => (plan ? plan.weeks.reduce((s, w) => s + w.sessions.length, 0) : 0),
     [plan]
   );
+  const completedCount = completed.size;
   const completionPct = totalSessions
     ? Math.round((completedCount / totalSessions) * 100)
     : 0;
+
+  // Derive "where am I in the plan today?" — null when we don't have all the
+  // inputs (e.g. plan exists but hasn't been hydrated yet).
+  const progress = useMemo(() => {
+    if (!plan || !planStartedAt) return null;
+    return getPlanProgress(planStartedAt, plan, completed);
+  }, [plan, planStartedAt, completed]);
 
   return (
     <motion.div
@@ -92,7 +104,7 @@ export const Dashboard = ({
         </motion.p>
       </div>
 
-      {/* Progress widget — only shown when there's a saved plan */}
+      {/* "Your plan" widget — today's suggested workout + overall progress */}
       {plan && planId && (
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -100,34 +112,72 @@ export const Dashboard = ({
           transition={{ delay: 0.15 }}
           className="mb-8 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-xl border border-emerald-500/30 p-6"
         >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
-              <div className="text-sm uppercase tracking-wide text-emerald-300 mb-1">
-                Your plan
+          <div className="text-xs uppercase tracking-wide font-mono text-emerald-300 mb-3">
+            Your plan
+          </div>
+
+          {/* Today's workout */}
+          {progress?.isComplete ? (
+            <div className="mb-5">
+              <div className="text-2xl sm:text-3xl font-display font-bold mb-1">
+                Plan complete
               </div>
-              <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-4xl font-bold text-emerald-400">
-                  {completedCount}
-                </span>
-                <span className="text-gray-300 text-sm">
-                  of {totalSessions} sessions complete
-                </span>
-                <span className="ml-2 text-xs text-gray-400">({completionPct}%)</span>
-              </div>
-              <div className="h-2 bg-gray-800 rounded-full overflow-hidden max-w-md">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${completionPct}%` }}
-                  transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-                  className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400"
-                />
+              <div className="text-sm text-gray-400">
+                You logged {completedCount} of {totalSessions} sessions. Time to onboard a new cycle when you're ready.
               </div>
             </div>
-            {onViewPlan && (
-              <Button variant="primary" onClick={onViewPlan} className="shrink-0">
-                View plan →
-              </Button>
-            )}
+          ) : progress?.nextSession ? (
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
+              <div className="min-w-0">
+                <div className="text-xs font-mono uppercase tracking-wide text-gray-400 mb-1">
+                  Week {progress.currentWeek} of {progress.totalWeeks} · next up
+                </div>
+                <div className="text-2xl sm:text-3xl font-display font-bold leading-tight">
+                  {progress.nextSession.title}
+                </div>
+                <div className="text-sm text-gray-300 mt-1">
+                  {progress.nextSession.focus} · Day {progress.nextSession.day}
+                </div>
+              </div>
+              {onViewPlan && (
+                <Button variant="primary" onClick={onViewPlan} className="shrink-0 self-start sm:self-auto">
+                  Open it →
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
+              <div>
+                <div className="text-2xl sm:text-3xl font-display font-bold mb-1">
+                  All sessions ticked off
+                </div>
+                <div className="text-sm text-gray-400">
+                  You're ahead of schedule. Review the plan or wait for the next training day.
+                </div>
+              </div>
+              {onViewPlan && (
+                <Button variant="ghost" onClick={onViewPlan} className="shrink-0 self-start sm:self-auto">
+                  Review plan →
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Progress bar */}
+          <div className="border-t border-emerald-500/20 pt-4">
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="font-mono text-2xl font-bold text-emerald-400">{completedCount}</span>
+              <span className="text-sm text-gray-300">of {totalSessions} sessions</span>
+              <span className="ml-auto font-mono text-xs text-gray-400">{completionPct}%</span>
+            </div>
+            <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${completionPct}%` }}
+                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400"
+              />
+            </div>
           </div>
         </motion.div>
       )}
