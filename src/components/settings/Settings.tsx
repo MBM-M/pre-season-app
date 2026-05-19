@@ -14,7 +14,11 @@ import {
 } from '@/types/onboarding';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
-import { saveUserPreferences } from '@/lib/database';
+import {
+  saveUserPreferences,
+  exportUserData,
+  deleteAccountData,
+} from '@/lib/database';
 import { Step0_Region } from '@/components/onboarding/Step0_Region';
 import { Step1_Position } from '@/components/onboarding/Step1_Position';
 import { Step2_FitnessLevel } from '@/components/onboarding/Step2_FitnessLevel';
@@ -28,6 +32,8 @@ interface SettingsProps {
   initialData: OnboardingData;
   onSaved: (updated: OnboardingData) => void;
   onCancel: () => void;
+  onShowPrivacy?: () => void;
+  onShowTerms?: () => void;
 }
 
 type SectionKey =
@@ -40,7 +46,13 @@ type SectionKey =
   | 'injury'
   | 'goal';
 
-export const Settings = ({ initialData, onSaved, onCancel }: SettingsProps) => {
+export const Settings = ({
+  initialData,
+  onSaved,
+  onCancel,
+  onShowPrivacy,
+  onShowTerms,
+}: SettingsProps) => {
   const { user } = useUser();
   const toast = useToast();
 
@@ -48,12 +60,64 @@ export const Settings = ({ initialData, onSaved, onCancel }: SettingsProps) => {
   const [openSection, setOpenSection] = useState<SectionKey | null>(null);
   const [saving, setSaving] = useState(false);
   const [premiumOn, setPremiumOn] = useState<boolean>(() => isPremium());
+  const [exporting, setExporting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const togglePremium = () => {
     const next = !premiumOn;
     setPremium(next);
     setPremiumOn(next);
     toast.success(next ? 'Premium dev access enabled' : 'Premium dev access disabled');
+  };
+
+  const handleExport = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const data = await exportUserData(user.id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.download = `pre-season-export-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Your data was exported.');
+    } catch (err) {
+      console.error('Export failed:', err);
+      toast.error("Couldn't export your data. Try again or contact support.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user || deleteConfirmText !== 'DELETE') return;
+    setDeleting(true);
+    try {
+      // 1. Wipe Supabase rows first (while we still have a valid Clerk session
+      //    that satisfies RLS). The ON DELETE CASCADE on users handles every
+      //    dependent table — user_preferences, training_plans, workout_completions.
+      await deleteAccountData(user.id);
+      // 2. Delete the Clerk auth account. This revokes the current session and
+      //    triggers Clerk's listeners; the app's auth effect will drop us back
+      //    to the landing page automatically.
+      await user.delete();
+      // (No further state work needed — Clerk's session change will reset App state.)
+    } catch (err) {
+      console.error('Account deletion failed:', err);
+      toast.error("Couldn't delete your account. Please try again.");
+      setDeleting(false);
+      setDeleteConfirmOpen(false);
+      setDeleteConfirmText('');
+    }
   };
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(initialData);
@@ -258,6 +322,110 @@ export const Settings = ({ initialData, onSaved, onCancel }: SettingsProps) => {
           </button>
         </div>
       </div>
+
+      {/* Account section — data export + delete (GDPR + App Store mandate) */}
+      <div className="mt-4 border border-gray-800 bg-gray-900/40 rounded-2xl p-5">
+        <div className="text-xs font-mono uppercase tracking-wide text-gray-400 mb-3">
+          Account
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <Button variant="ghost" onClick={handleExport} disabled={exporting}>
+            {exporting ? 'Preparing…' : 'Export my data'}
+          </Button>
+          <p className="text-sm text-gray-400 sm:self-center">
+            Download every row tied to your account as JSON.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 items-start">
+          <button
+            onClick={() => {
+              setDeleteConfirmText('');
+              setDeleteConfirmOpen(true);
+            }}
+            className="px-6 py-3 rounded-xl text-sm font-semibold text-red-400 border border-red-500/40 hover:bg-red-500/10 transition"
+          >
+            Delete my account
+          </button>
+          <p className="text-sm text-gray-400 sm:self-center">
+            Permanently deletes your profile, preferences, plans, and history. Can&apos;t be undone.
+          </p>
+        </div>
+
+        {(onShowPrivacy || onShowTerms) && (
+          <div className="mt-5 pt-4 border-t border-gray-800 flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
+            {onShowPrivacy && (
+              <button onClick={onShowPrivacy} className="hover:text-gray-300 transition">
+                Privacy Policy
+              </button>
+            )}
+            {onShowTerms && (
+              <button onClick={onShowTerms} className="hover:text-gray-300 transition">
+                Terms of Service
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Delete confirmation modal */}
+      <AnimatePresence>
+        {deleteConfirmOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
+              onClick={() => !deleting && setDeleteConfirmOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div className="w-full max-w-md rounded-2xl bg-gray-900 border border-red-500/40 p-6 pointer-events-auto shadow-2xl">
+                <h2 className="font-display text-2xl font-bold mb-2">Delete your account?</h2>
+                <p className="text-sm text-gray-400 mb-4">
+                  This deletes everything: your profile, onboarding answers, training plans,
+                  workout completions, and your sign-in. There is no recovery path.
+                </p>
+                <p className="text-sm text-gray-300 mb-2">
+                  Type <span className="font-mono text-red-300">DELETE</span> to confirm:
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white font-mono focus:border-red-500/60 focus:outline-none mb-5"
+                  placeholder="DELETE"
+                  autoFocus
+                  disabled={deleting}
+                />
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </Button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteConfirmText !== 'DELETE' || deleting}
+                    className="px-6 py-3 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    {deleting ? 'Deleting…' : 'Delete forever'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Sticky save bar */}
       <div className="sticky bottom-0 mt-8 -mx-4 px-4 py-4 bg-gradient-to-t from-gray-950 via-gray-950/95 to-transparent">

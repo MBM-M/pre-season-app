@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 interface LandingProps {
   onGetStarted: () => void;
   onSignIn: () => void;
+  onShowPrivacy?: () => void;
+  onShowTerms?: () => void;
 }
 
 /**
@@ -12,7 +14,12 @@ interface LandingProps {
  *
  * Signed-in users are routed straight past this by the auth effect in App.tsx.
  */
-export const Landing = ({ onGetStarted, onSignIn }: LandingProps) => {
+export const Landing = ({
+  onGetStarted,
+  onSignIn,
+  onShowPrivacy,
+  onShowTerms,
+}: LandingProps) => {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 overflow-x-hidden">
       <Nav onSignIn={onSignIn} onGetStarted={onGetStarted} />
@@ -23,7 +30,7 @@ export const Landing = ({ onGetStarted, onSignIn }: LandingProps) => {
       <Phases />
       <Pricing onGetStarted={onGetStarted} />
       <FinalCTA onGetStarted={onGetStarted} onSignIn={onSignIn} />
-      <Footer />
+      <Footer onShowPrivacy={onShowPrivacy} onShowTerms={onShowTerms} />
     </div>
   );
 };
@@ -861,7 +868,13 @@ const FinalCTA = ({
 // Footer
 // ─────────────────────────────────────────────────────────────────────────────
 
-const Footer = () => (
+const Footer = ({
+  onShowPrivacy,
+  onShowTerms,
+}: {
+  onShowPrivacy?: () => void;
+  onShowTerms?: () => void;
+}) => (
   <footer className="border-t border-gray-900 py-8 text-sm text-gray-500">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-3">
@@ -872,7 +885,7 @@ const Footer = () => (
         <span className="text-gray-700">·</span>
         <span>'26</span>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
         <span>Built by MBM-M</span>
         <a
           href="https://github.com/MBM-M/pre-season-app"
@@ -882,10 +895,24 @@ const Footer = () => (
         >
           GitHub
         </a>
-        <a href="#" className="hover:text-white transition">
+        <button
+          type="button"
+          onClick={onShowPrivacy}
+          className="hover:text-white transition"
+        >
           Privacy
-        </a>
-        <a href="#" className="hover:text-white transition">
+        </button>
+        <button
+          type="button"
+          onClick={onShowTerms}
+          className="hover:text-white transition"
+        >
+          Terms
+        </button>
+        <a
+          href="mailto:muhammadbm.01@gmail.com"
+          className="hover:text-white transition"
+        >
           Contact
         </a>
       </div>

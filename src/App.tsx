@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUser, SignIn, SignUp } from '@clerk/clerk-react';
 import { Onboarding } from '@/components/onboarding/Onboarding';
 import { Landing } from '@/components/landing/Landing';
+import { PrivacyPolicy, TermsOfService } from '@/components/legal/Legal';
 import { Confirmation } from '@/components/onboarding/Confirmation';
 import { ImprovementVision } from '@/components/onboarding/ImprovementVision';
 import { Dashboard } from '@/components/dashboard/Dashboard';
@@ -32,7 +33,9 @@ type Screen =
   | 'confirmation'
   | 'dashboard'
   | 'training-plan'
-  | 'settings';
+  | 'settings'
+  | 'privacy'
+  | 'terms';
 
 const PAGE_BG = 'min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950';
 
@@ -276,6 +279,24 @@ function App() {
       <Landing
         onGetStarted={() => setCurrentScreen('onboarding')}
         onSignIn={() => setCurrentScreen('signin')}
+        onShowPrivacy={() => setCurrentScreen('privacy')}
+        onShowTerms={() => setCurrentScreen('terms')}
+      />
+    );
+  }
+
+  // ---------- Legal pages (publicly reachable) ----------
+  if (currentScreen === 'privacy') {
+    return (
+      <PrivacyPolicy
+        onBack={() => setCurrentScreen(isSignedIn ? 'settings' : 'landing')}
+      />
+    );
+  }
+  if (currentScreen === 'terms') {
+    return (
+      <TermsOfService
+        onBack={() => setCurrentScreen(isSignedIn ? 'settings' : 'landing')}
       />
     );
   }
@@ -394,6 +415,8 @@ function App() {
             setCurrentScreen('dashboard');
           }}
           onCancel={() => setCurrentScreen('dashboard')}
+          onShowPrivacy={() => setCurrentScreen('privacy')}
+          onShowTerms={() => setCurrentScreen('terms')}
         />
       </div>
     );

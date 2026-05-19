@@ -294,3 +294,96 @@ export async function getCompletions(planId: string): Promise<SessionCompletion[
     };
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Account: export + delete (GDPR / App Store Connect requirements)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface UserDataExport {
+  exportedAt: string;
+  account: { clerkId: string; email: string; createdAt: string };
+  preferences: OnboardingData | null;
+  plans: SavedPlan[];
+  completions: Array<{
+    planId: string;
+    weekNumber: number;
+    day: number;
+    completedAt: string;
+  }>;
+}
+
+/** Collect every row tied to the user into a single JSON payload. */
+export async function exportUserData(clerkId: string): Promise<UserDataExport> {
+  const userId = await getUserIdByClerk(clerkId);
+
+  const { data: userRow, error: userErr } = await supabase
+    .from('users')
+    .select('clerk_id, email, created_at')
+    .eq('id', userId)
+    .single();
+  if (userErr) {
+    console.error('Error fetching user row for export:', userErr);
+    throw userErr;
+  }
+
+  const preferences = await getUserPreferences(clerkId);
+
+  const { data: planRows, error: planErr } = await supabase
+    .from('training_plans')
+    .select('id, plan_data, is_premium, created_at, started_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (planErr) {
+    console.error('Error fetching plans for export:', planErr);
+    throw planErr;
+  }
+
+  const { data: completionRows, error: compErr } = await supabase
+    .from('workout_completions')
+    .select('plan_id, week_number, day, completed_at')
+    .eq('user_id', userId);
+  if (compErr) {
+    console.error('Error fetching completions for export:', compErr);
+    throw compErr;
+  }
+
+  return {
+    exportedAt: new Date().toISOString(),
+    account: {
+      clerkId: (userRow as { clerk_id: string }).clerk_id,
+      email: (userRow as { email: string }).email,
+      createdAt: (userRow as { created_at: string }).created_at,
+    },
+    preferences,
+    plans: (planRows ?? []).map((r) => rowToSavedPlan(r as TrainingPlanRow)),
+    completions: (completionRows ?? []).map((r) => {
+      const row = r as {
+        plan_id: string;
+        week_number: number;
+        day: number;
+        completed_at: string;
+      };
+      return {
+        planId: row.plan_id,
+        weekNumber: row.week_number,
+        day: row.day,
+        completedAt: row.completed_at,
+      };
+    }),
+  };
+}
+
+/** Delete every row tied to the user. Cascades via ON DELETE CASCADE on the FK
+ *  from each child table back to users(id). Does NOT delete the Clerk auth
+ *  account — that lives in Clerk and the caller deletes it separately. */
+export async function deleteAccountData(clerkId: string): Promise<void> {
+  const { error } = await supabase
+    .from('users')
+    .delete()
+    .eq('clerk_id', clerkId);
+
+  if (error) {
+    console.error('Error deleting account data:', error);
+    throw error;
+  }
+}
