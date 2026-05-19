@@ -78,7 +78,7 @@ export const Dashboard = ({
         <motion.h1
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="text-5xl font-bold mb-4"
+          className="font-display text-4xl sm:text-5xl font-bold mb-4"
         >
           Welcome to Pre-Season
         </motion.h1>

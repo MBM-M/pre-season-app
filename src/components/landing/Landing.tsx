@@ -65,16 +65,16 @@ const Nav = ({
           </a>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           <button
             onClick={onSignIn}
-            className="text-sm text-gray-300 hover:text-white transition px-3 py-2"
+            className="hidden sm:inline text-sm text-gray-300 hover:text-white transition px-3 py-2"
           >
             Sign in
           </button>
           <button
             onClick={onGetStarted}
-            className="text-sm font-semibold bg-gradient-to-br from-emerald-400 to-cyan-500 text-gray-950 px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-emerald-500/30 transition"
+            className="text-sm font-semibold bg-gradient-to-br from-emerald-400 to-cyan-500 text-gray-950 px-3 sm:px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-emerald-500/30 transition whitespace-nowrap"
           >
             Build my plan →
           </button>
@@ -104,7 +104,7 @@ const Hero = ({ onGetStarted }: { onGetStarted: () => void }) => {
             PRE-SEASON WINDOW OPENS JUNE 24
           </div>
 
-          <h1 className="font-display text-5xl sm:text-6xl font-bold tracking-tight leading-[1.05] mb-6">
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-6">
             Build a pre-season that fits
             <br />
             <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
@@ -228,8 +228,8 @@ const MockDashboard = () => (
       </div>
     </div>
 
-    {/* Knee filter toast (decorative overlay) */}
-    <div className="absolute top-24 -left-2 sm:left-4 rounded-lg border border-red-500/40 bg-gray-900/95 backdrop-blur px-3 py-2 text-xs shadow-xl">
+    {/* Knee filter toast (decorative overlay) — hidden on very narrow screens so it doesn't clip */}
+    <div className="hidden sm:block absolute top-24 left-4 rounded-lg border border-red-500/40 bg-gray-900/95 backdrop-blur px-3 py-2 text-xs shadow-xl">
       <div className="flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-red-500" />
         <span className="text-red-300 font-semibold">Knee filter active</span>
@@ -238,7 +238,7 @@ const MockDashboard = () => (
     </div>
 
     {/* Peak Week 5 chip — sits near the end of the projection curve */}
-    <div className="absolute bottom-32 right-2 sm:-right-3 rounded-lg border border-emerald-500/40 bg-gray-900/95 backdrop-blur px-3 py-2 text-xs shadow-xl">
+    <div className="hidden sm:block absolute bottom-32 right-3 rounded-lg border border-emerald-500/40 bg-gray-900/95 backdrop-blur px-3 py-2 text-xs shadow-xl">
       <div className="flex items-center gap-2">
         <span className="font-mono text-[10px] text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded">
           P3
