@@ -1,6 +1,7 @@
 import { EQUIPMENT_OPTIONS, Equipment } from '@/types/onboarding';
 import { OptionCard } from '@/components/ui/OptionCard';
 import { EducationCard } from '@/components/ui/EducationCard';
+import { useRegion } from '@/contexts/RegionContext';
 
 interface Step5EquipmentProps {
   selected: Equipment[];
@@ -9,6 +10,7 @@ interface Step5EquipmentProps {
 }
 
 export const Step5_Equipment = ({ selected, onSelect, onDeselect }: Step5EquipmentProps) => {
+  const { config } = useRegion();
   const toggleSelection = (equipment: Equipment) => {
     if (selected.includes(equipment)) {
       onDeselect(equipment);
@@ -46,7 +48,7 @@ export const Step5_Equipment = ({ selected, onSelect, onDeselect }: Step5Equipme
       <EducationCard
         title="You can get great results anywhere!"
         icon="🏆"
-        content="Research proves you don't need expensive equipment to get in game shape. Studies on football-specific training show that bodyweight exercises in open fields can improve sprint speed by 8-12% and agility by 15% over 8 weeks. Resistance bands are particularly effective for functional strength, matching gym machines for many football-specific movements. Even with just a ball and a field, you can develop elite-level technical skills and cardiovascular fitness."
+        content={`Research proves you don't need expensive equipment to get in game shape. Studies on ${config.sportNoun}-specific training show that bodyweight exercises in open fields can improve sprint speed by 8-12% and agility by 15% over 8 weeks. Resistance bands are particularly effective for functional strength, matching gym machines for many ${config.sportNoun}-specific movements. Even with just a ball and a field, you can develop elite-level technical skills and cardiovascular fitness.`}
         source="Sports Medicine Open, 2021; Journal of Human Kinetics, 2020; International Journal of Sports Physiology, 2022"
       />
     </div>

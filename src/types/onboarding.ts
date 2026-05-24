@@ -66,7 +66,7 @@ export const DAYS_OPTIONS: { value: DaysPerWeek; label: string }[] = [
 export const EQUIPMENT_OPTIONS: { value: Equipment; label: string; emoji: string }[] = [
   { value: 'field', label: 'Open field / park', emoji: '🏟️' },
   { value: 'gym', label: 'Gym membership', emoji: '🏋️' },
-  { value: 'ball', label: 'Football', emoji: '⚽' },
+  { value: 'ball', label: 'Ball', emoji: '⚽' },
   { value: 'bands', label: 'Resistance bands', emoji: '💪' },
 ];
 

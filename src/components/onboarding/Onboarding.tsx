@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, Region, FootballPosition, FitnessLevel, WeeksAvailable, DaysPerWeek, Equipment, InjuryArea, PrimaryGoal } from '@/types/onboarding';
 import { ProgressIndicator } from '@/components/ui/ProgressIndicator';
 import { Button } from '@/components/ui/Button';
-import { Step0_Region } from './Step0_Region';
+import { useRegion } from '@/contexts/RegionContext';
 import { Step1_Position } from './Step1_Position';
 import { Step2_FitnessLevel } from './Step2_FitnessLevel';
 import { Step3_TrainingWindow } from './Step3_TrainingWindow';
@@ -12,8 +12,9 @@ import { Step5_Equipment } from './Step5_Equipment';
 import { Step6_Injuries } from './Step6_Injuries';
 import { Step7_Goal } from './Step7_Goal';
 
+// Region is no longer asked here — it's auto-detected (and overridable in
+// Settings). These are the seven questions that actually shape the plan.
 const STEPS = [
-  'Region',
   'Position',
   'Fitness',
   'Timeline',
@@ -30,6 +31,7 @@ interface OnboardingProps {
 }
 
 export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps) => {
+  const { region: detectedRegion } = useRegion();
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
 
@@ -44,21 +46,21 @@ export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps
     injuryDetails?: string;
     goal?: PrimaryGoal;
   }>({
-    region: 'uk-ireland',
+    // Seeded from auto-detection; the user can correct it later in Settings.
+    region: detectedRegion,
     equipment: [],
     injury: 'none',
   });
 
   const canGoNext = () => {
     switch (currentStep) {
-      case 0: return !!formData.region;
-      case 1: return !!formData.position;
-      case 2: return !!formData.fitnessLevel;
-      case 3: return !!formData.weeksAvailable;
-      case 4: return !!formData.daysPerWeek;
-      case 5: return formData.equipment.length > 0;
-      case 6: return !!formData.injury;
-      case 7: return !!formData.goal;
+      case 0: return !!formData.position;
+      case 1: return !!formData.fitnessLevel;
+      case 2: return !!formData.weeksAvailable;
+      case 3: return !!formData.daysPerWeek;
+      case 4: return formData.equipment.length > 0;
+      case 5: return !!formData.injury;
+      case 6: return !!formData.goal;
       default: return false;
     }
   };
@@ -100,40 +102,33 @@ export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps
     switch (currentStep) {
       case 0:
         return (
-          <Step0_Region
-            selected={formData.region}
-            onSelect={(region) => setFormData({ ...formData, region })}
-          />
-        );
-      case 1:
-        return (
           <Step1_Position
             selected={formData.position || null}
             onSelect={(position) => setFormData({ ...formData, position })}
           />
         );
-      case 2:
+      case 1:
         return (
           <Step2_FitnessLevel
             selected={formData.fitnessLevel ?? null}
             onSelect={(fitnessLevel) => setFormData({ ...formData, fitnessLevel })}
           />
         );
-      case 3:
+      case 2:
         return (
           <Step3_TrainingWindow
             selected={formData.weeksAvailable ?? null}
             onSelect={(weeksAvailable) => setFormData({ ...formData, weeksAvailable })}
           />
         );
-      case 4:
+      case 3:
         return (
           <Step4_Availability
             selected={formData.daysPerWeek ?? null}
             onSelect={(daysPerWeek) => setFormData({ ...formData, daysPerWeek })}
           />
         );
-      case 5:
+      case 4:
         return (
           <Step5_Equipment
             selected={formData.equipment}
@@ -141,7 +136,7 @@ export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps
             onDeselect={(eq) => setFormData({ ...formData, equipment: formData.equipment.filter(e => e !== eq) })}
           />
         );
-      case 6:
+      case 5:
         return (
           <Step6_Injuries
             selected={formData.injury}
@@ -150,7 +145,7 @@ export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps
             onDetailsChange={(details) => setFormData({ ...formData, injuryDetails: details })}
           />
         );
-      case 7:
+      case 6:
         return (
           <Step7_Goal
             selected={formData.goal ?? null}

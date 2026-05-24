@@ -6,6 +6,8 @@
  * review the wording before any commercial launch.
  */
 
+import { useRegion } from '@/contexts/RegionContext';
+
 interface LegalProps {
   onBack: () => void;
 }
@@ -85,6 +87,11 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
           your onboarding inputs are sent to the Anthropic Claude API to produce the
           plan, then discarded by Anthropic per their data retention policy.
         </li>
+        <li>
+          <span className="text-white">Stripe</span> — when you purchase the premium
+          tier, your payment is handled by Stripe. We never see your card details;
+          Stripe stores them on their PCI-compliant infrastructure.
+        </li>
       </ul>
 
       <SectionHeading>How we use it</SectionHeading>
@@ -128,7 +135,9 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
   </div>
 );
 
-export const TermsOfService = ({ onBack }: LegalProps) => (
+export const TermsOfService = ({ onBack }: LegalProps) => {
+  const { config } = useRegion();
+  return (
   <div className={PAGE_CONTAINER}>
     <div className={INNER}>
       <BackButton onBack={onBack} />
@@ -144,7 +153,7 @@ export const TermsOfService = ({ onBack }: LegalProps) => (
 
       <SectionHeading>What the service is</SectionHeading>
       <p>
-        Pre-Season generates periodized football training plans personalized to your
+        Pre-Season generates periodized {config.sportNoun} training plans personalized to your
         inputs. Plans are produced either by a deterministic in-app engine (free) or by
         a server-side call to a large language model (premium). The app helps you
         organize and track training; it is not a substitute for professional coaching,
@@ -171,10 +180,12 @@ export const TermsOfService = ({ onBack }: LegalProps) => (
 
       <SectionHeading>Premium tier</SectionHeading>
       <p>
-        The premium tier provides AI-generated plans using the Anthropic Claude API.
-        When purchased through Apple's App Store, billing and refunds are managed
-        through Apple per their standard policies. Plans are delivered immediately upon
-        purchase; the right of withdrawal does not apply once a plan has been generated.
+        The premium tier ({config.currencyCode} {config.premiumPrice}, one-off) provides an
+        AI-generated plan using the Anthropic Claude API. Payment is processed by Stripe; we do not store your
+        card details. Plans are delivered immediately upon purchase. Because the plan
+        is delivered as a digital good consumed at the moment of generation, the right
+        of withdrawal does not apply once a plan has been generated; refund requests
+        for technical failures will be considered case-by-case via email.
       </p>
 
       <SectionHeading>Account termination</SectionHeading>
@@ -204,4 +215,5 @@ export const TermsOfService = ({ onBack }: LegalProps) => (
       </p>
     </div>
   </div>
-);
+  );
+};

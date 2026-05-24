@@ -20,6 +20,7 @@ import { generateTrainingPlan, TrainingPlan as GeneratedPlan } from '@/lib/planG
 import { generateAITrainingPlan } from '@/lib/aiPlanGenerator';
 import { isPremium } from '@/lib/premium';
 import { useToast } from '@/components/ui/Toast';
+import { useRegion } from '@/contexts/RegionContext';
 import './App.css';
 
 const ONBOARDING_STORAGE_KEY = 'pending_onboarding_data';
@@ -42,6 +43,7 @@ const PAGE_BG = 'min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gr
 function App() {
   const { isSignedIn, user, isLoaded } = useUser();
   const toast = useToast();
+  const { setRegion, resetRegion } = useRegion();
 
   const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
@@ -78,6 +80,14 @@ function App() {
     [user, toast]
   );
 
+  // Keep the region context in step with the loaded/edited preferences so
+  // currency + terminology reflect the user's saved (or overridden) region
+  // rather than only the auto-detected default.
+  const savedRegion = onboardingData?.region;
+  useEffect(() => {
+    if (savedRegion) setRegion(savedRegion);
+  }, [savedRegion, setRegion]);
+
   // After Clerk loads / signs in, reconcile screen with user state.
   useEffect(() => {
     if (!isLoaded) return;
@@ -88,6 +98,8 @@ function App() {
       setGeneratedPlan(null);
       setCurrentPlanId(null);
       setCurrentPlanStartedAt(null);
+      // Forget any saved-region override and re-detect for the next visitor.
+      resetRegion();
       if (
         currentScreen === 'dashboard' ||
         currentScreen === 'training-plan' ||

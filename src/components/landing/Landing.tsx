@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useRegion } from '@/contexts/RegionContext';
 
 interface LandingProps {
   onGetStarted: () => void;
@@ -146,7 +147,7 @@ const Hero = ({ onGetStarted }: { onGetStarted: () => void }) => {
           </div>
 
           <div className="grid grid-cols-3 gap-6 max-w-md">
-            <Stat value="8" label="steps to plan" />
+            <Stat value="7" label="steps to plan" />
             <Stat value="4–10" label="week windows" />
             <Stat value="1,400+" label="tagged exercises" />
           </div>
@@ -388,6 +389,7 @@ const DayCard = ({
 // ─────────────────────────────────────────────────────────────────────────────
 
 const FilterStrip = () => {
+  const { config } = useRegion();
   const pills = [
     'Endurance',
     'Strength',
@@ -402,7 +404,7 @@ const FilterStrip = () => {
     'Forward',
     'Open field',
     'Gym membership',
-    'Football',
+    config.sportNounCap,
     'Resistance bands',
     'Endurance',
     'Speed',
@@ -428,48 +430,43 @@ const FilterStrip = () => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// "Eight short questions. One periodized plan."
+// "Seven short questions. One periodized plan."
 // ─────────────────────────────────────────────────────────────────────────────
 
 const HowItWorks = () => {
   const steps = [
     {
       step: 'STEP 01',
-      title: 'Region',
-      body: "UK / Ireland, Canada / USA, or other — we localize terminology and seasons.",
-    },
-    {
-      step: 'STEP 02',
       title: 'Position',
       body: 'Goalkeeper, defender, midfielder, or forward. Drills bubble to the top.',
     },
     {
-      step: 'STEP 03',
+      step: 'STEP 02',
       title: 'Fitness',
       body: 'Beginner, intermediate, advanced. Sets your starting intensity.',
     },
     {
-      step: 'STEP 04',
+      step: 'STEP 03',
       title: 'Timeline',
       body: '4, 6, 8, or 10+ weeks. Determines how phases compress or breathe.',
     },
     {
-      step: 'STEP 05',
+      step: 'STEP 04',
       title: 'Days/wk',
       body: '2 to 5. We never overlap heavy days and we honor your real life.',
     },
     {
-      step: 'STEP 06',
+      step: 'STEP 05',
       title: 'Equipment',
       body: 'Field, gym, ball, bands. Sessions only use what you have.',
     },
     {
-      step: 'STEP 07',
+      step: 'STEP 06',
       title: 'Injuries',
       body: 'Knee, ankle, back, other. Exercises tagged by body part get filtered.',
     },
     {
-      step: 'STEP 08',
+      step: 'STEP 07',
       title: 'Goal',
       body: 'Endurance, strength, speed, skills, weight-loss. Tilts the volume mix.',
     },
@@ -482,7 +479,7 @@ const HowItWorks = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <h2 className="font-display text-4xl font-bold tracking-tight">
-            Eight short questions.
+            Seven short questions.
             <br />
             <span className="text-emerald-400">One periodized plan.</span>
           </h2>
@@ -711,6 +708,7 @@ const BigChart = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Pricing = ({ onGetStarted }: { onGetStarted: () => void }) => {
+  const { config } = useRegion();
   return (
     <section id="pricing" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
       <div className="text-center mb-12">
@@ -737,8 +735,8 @@ const Pricing = ({ onGetStarted }: { onGetStarted: () => void }) => {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold">£0</div>
-              <div className="text-xs text-gray-500">forever</div>
+              <div className="font-mono text-3xl font-bold">{config.freePrice}</div>
+              <div className="text-xs text-gray-500">{config.currencyCode} · forever</div>
             </div>
           </div>
           <ul className="space-y-2 mt-6 mb-8 text-sm text-gray-300">
@@ -782,8 +780,8 @@ const Pricing = ({ onGetStarted }: { onGetStarted: () => void }) => {
               <div className="text-sm text-gray-400 mt-1">Claude-generated, structured</div>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold">£6</div>
-              <div className="text-xs text-gray-500">one-off</div>
+              <div className="font-mono text-3xl font-bold">{config.premiumPrice}</div>
+              <div className="text-xs text-gray-500">{config.currencyCode} · one-off</div>
             </div>
           </div>
           <ul className="space-y-2 mt-6 mb-8 text-sm text-gray-300">
@@ -836,7 +834,7 @@ const FinalCTA = ({
       Season opens in 40 days
     </div>
     <h2 className="font-display text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-      Eight questions.
+      Seven questions.
       <br />
       <span className="text-emerald-400">Then start training.</span>
     </h2>
