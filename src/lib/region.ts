@@ -1,4 +1,4 @@
-import { Region } from '@/types/onboarding';
+import { Region, WeeksAvailable } from '@/types/onboarding';
 
 /**
  * Region detection + per-region presentation config.
@@ -140,8 +140,14 @@ export interface RegionConfig {
   currencyCode: 'GBP' | 'CAD' | 'USD';
   /** Display string for the free tier, e.g. "$0" / "£0". */
   freePrice: string;
-  /** Display string for the premium tier, e.g. "$9" / "£5". */
-  premiumPrice: string;
+  /**
+   * Premium is a one-off "season pass" priced by season length. These are the
+   * display strings per WeeksAvailable; the cheapest (4-week) doubles as the
+   * "from" price on the marketing page.
+   */
+  seasonPrices: Record<WeeksAvailable, string>;
+  /** Cheapest season price, for "from X" displays. */
+  premiumFromPrice: string;
   /** The sport noun in lower case, for mid-sentence use ("a soccer plan"). */
   sportNoun: 'football' | 'soccer';
   /** Capitalized sport noun, for labels and start-of-sentence use. */
@@ -149,29 +155,33 @@ export interface RegionConfig {
 }
 
 /**
- * NOTE: the premium amounts here are presentation placeholders, set roughly at
- * parity (~CAD $9). The amount actually charged gets configured in Stripe when
- * checkout is wired — change these in one place if the headline numbers move.
+ * NOTE: these amounts are presentation strings only — they must be kept in sync
+ * with the actual Stripe prices (one per currency × season length). The CAD
+ * ladder is the reference (7 / 11 / 15 / 19); GBP and USD mirror it roughly at
+ * clean round numbers. Change them here if the headline numbers move.
  */
 export const REGION_CONFIG: Record<Region, RegionConfig> = {
   'uk-ireland': {
     currencyCode: 'GBP',
     freePrice: '£0',
-    premiumPrice: '£5',
+    seasonPrices: { 4: '£4', 6: '£6', 8: '£8', 10: '£10' },
+    premiumFromPrice: '£4',
     sportNoun: 'football',
     sportNounCap: 'Football',
   },
   'canada-usa': {
     currencyCode: 'CAD',
     freePrice: '$0',
-    premiumPrice: '$9',
+    seasonPrices: { 4: '$7', 6: '$11', 8: '$15', 10: '$19' },
+    premiumFromPrice: '$7',
     sportNoun: 'soccer',
     sportNounCap: 'Soccer',
   },
   other: {
     currencyCode: 'USD',
     freePrice: '$0',
-    premiumPrice: '$9',
+    seasonPrices: { 4: '$5', 6: '$8', 8: '$11', 10: '$14' },
+    premiumFromPrice: '$5',
     sportNoun: 'football',
     sportNounCap: 'Football',
   },
@@ -179,4 +189,9 @@ export const REGION_CONFIG: Record<Region, RegionConfig> = {
 
 export function getRegionConfig(region: Region): RegionConfig {
   return REGION_CONFIG[region] ?? REGION_CONFIG.other;
+}
+
+/** Display price for one season pass at a given length, in the region's currency. */
+export function premiumPriceFor(region: Region, weeks: WeeksAvailable): string {
+  return getRegionConfig(region).seasonPrices[weeks];
 }

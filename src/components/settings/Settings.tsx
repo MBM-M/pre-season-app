@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { isPremium, setPremium } from '@/lib/premium';
 import {
   OnboardingData,
   REGIONS,
@@ -59,18 +58,10 @@ export const Settings = ({
   const [draft, setDraft] = useState<OnboardingData>(initialData);
   const [openSection, setOpenSection] = useState<SectionKey | null>(null);
   const [saving, setSaving] = useState(false);
-  const [premiumOn, setPremiumOn] = useState<boolean>(() => isPremium());
   const [exporting, setExporting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
-
-  const togglePremium = () => {
-    const next = !premiumOn;
-    setPremium(next);
-    setPremiumOn(next);
-    toast.success(next ? 'Premium dev access enabled' : 'Premium dev access disabled');
-  };
 
   const handleExport = async () => {
     if (!user) return;
@@ -290,41 +281,8 @@ export const Settings = ({
         </Section>
       </div>
 
-      {/* Developer panel — flip the premium gate locally for dev/testing. */}
-      <div className="mt-8 border border-dashed border-purple-500/30 bg-purple-500/5 rounded-2xl p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-purple-300 mb-1">
-              Developer
-            </div>
-            <div className="font-medium text-gray-100">Premium dev access</div>
-            <div className="text-sm text-gray-400 mt-1">
-              Unlocks the AI-generated training plan locally. Stripe checkout
-              isn&apos;t wired yet — this flag is your way to test the premium
-              path end-to-end.
-            </div>
-          </div>
-          <button
-            onClick={togglePremium}
-            role="switch"
-            aria-checked={premiumOn}
-            className={[
-              'relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors',
-              premiumOn ? 'bg-emerald-500' : 'bg-gray-700',
-            ].join(' ')}
-          >
-            <motion.span
-              layout
-              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow"
-              animate={{ x: premiumOn ? 20 : 0 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            />
-          </button>
-        </div>
-      </div>
-
       {/* Account section — data export + delete (GDPR + App Store mandate) */}
-      <div className="mt-4 border border-gray-800 bg-gray-900/40 rounded-2xl p-5">
+      <div className="mt-8 border border-gray-800 bg-gray-900/40 rounded-2xl p-5">
         <div className="text-xs font-mono uppercase tracking-wide text-gray-400 mb-3">
           Account
         </div>

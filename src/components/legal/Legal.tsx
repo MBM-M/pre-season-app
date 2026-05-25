@@ -180,12 +180,15 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
 
       <SectionHeading>Premium tier</SectionHeading>
       <p>
-        The premium tier ({config.currencyCode} {config.premiumPrice}, one-off) provides an
-        AI-generated plan using the Anthropic Claude API. Payment is processed by Stripe; we do not store your
-        card details. Plans are delivered immediately upon purchase. Because the plan
-        is delivered as a digital good consumed at the moment of generation, the right
-        of withdrawal does not apply once a plan has been generated; refund requests
-        for technical failures will be considered case-by-case via email.
+        The premium tier is a one-off payment per season, priced by season length
+        (from {config.currencyCode} {config.premiumFromPrice}). It unlocks unlimited
+        AI-generated plans, using the Anthropic Claude API, for the length of that
+        season; once the season elapses a new purchase is required. Payment is
+        processed by Stripe; we do not store your card details. Access is granted
+        immediately upon purchase. Because this is a digital service delivered
+        immediately, the right of withdrawal does not apply once you have generated a
+        plan within the season; refund requests for technical failures will be
+        considered case-by-case via email.
       </p>
 
       <SectionHeading>Account termination</SectionHeading>

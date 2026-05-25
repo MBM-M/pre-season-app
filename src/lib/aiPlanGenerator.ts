@@ -18,7 +18,8 @@ interface InvokeResponse {
  * input validation, so this is safe.
  */
 export async function generateAITrainingPlan(
-  data: OnboardingData
+  data: OnboardingData,
+  generationToken: string
 ): Promise<TrainingPlan> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-premium-plan`;
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -32,7 +33,7 @@ export async function generateAITrainingPlan(
         Authorization: `Bearer ${anonKey}`,
         apikey: anonKey,
       },
-      body: JSON.stringify({ onboardingData: data }),
+      body: JSON.stringify({ onboardingData: data, generationToken }),
     });
   } catch (err) {
     throw new Error(

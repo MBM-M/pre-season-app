@@ -18,7 +18,7 @@ import {
 } from '@/lib/database';
 import { generateTrainingPlan, TrainingPlan as GeneratedPlan } from '@/lib/planGenerator';
 import { generateAITrainingPlan } from '@/lib/aiPlanGenerator';
-import { isPremium } from '@/lib/premium';
+import { getActivePassExpiry, claimGeneration, startCheckout } from '@/lib/premium';
 import { useToast } from '@/components/ui/Toast';
 import { useRegion } from '@/contexts/RegionContext';
 import './App.css';
@@ -43,7 +43,7 @@ const PAGE_BG = 'min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gr
 function App() {
   const { isSignedIn, user, isLoaded } = useUser();
   const toast = useToast();
-  const { setRegion, resetRegion } = useRegion();
+  const { region, config, setRegion, resetRegion } = useRegion();
 
   const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
@@ -52,6 +52,20 @@ function App() {
   const [currentPlanStartedAt, setCurrentPlanStartedAt] = useState<string | null>(null);
   const [isCheckingPendingData, setIsCheckingPendingData] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [passExpiry, setPassExpiry] = useState<string | null>(null);
+  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState(false);
+
+  const hasPass = !!passExpiry;
+
+  const refreshPass = useCallback(async () => {
+    if (!user) return;
+    try {
+      setPassExpiry(await getActivePassExpiry());
+    } catch (err) {
+      console.error('Error refreshing AI season pass:', err);
+    }
+  }, [user]);
 
   /**
    * Persist onboarding data and move to confirmation. Returns true on success.
@@ -87,6 +101,53 @@ function App() {
   useEffect(() => {
     if (savedRegion) setRegion(savedRegion);
   }, [savedRegion, setRegion]);
+
+  // Handle the return from Stripe Checkout. success_url / cancel_url carry a
+  // ?checkout= flag; we surface a toast, strip the param, and (on success)
+  // start polling for the credit to be marked paid by the webhook.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const outcome = params.get('checkout');
+    if (!outcome) return;
+    window.history.replaceState({}, '', window.location.pathname);
+    if (outcome === 'success') {
+      toast.success('Payment received. Preparing your AI-plan credit…');
+      setPendingCheckout(true);
+    } else if (outcome === 'cancel') {
+      toast.info('Checkout canceled — you have not been charged.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The webhook can lag the redirect by a second or two, so poll a few times
+  // until the freshly purchased pass appears, then stop.
+  useEffect(() => {
+    if (!pendingCheckout || !user) return;
+    let active = true;
+    let tries = 0;
+    const tick = async () => {
+      tries += 1;
+      let expiry: string | null = null;
+      try {
+        expiry = await getActivePassExpiry();
+      } catch (err) {
+        console.error('Error polling AI season pass:', err);
+      }
+      if (!active) return;
+      if (expiry || tries >= 4) {
+        setPassExpiry(expiry);
+        setPendingCheckout(false);
+        if (expiry) toast.success('Your AI season pass is active.');
+        return;
+      }
+      window.setTimeout(tick, 2000);
+    };
+    void tick();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingCheckout, user]);
 
   // After Clerk loads / signs in, reconcile screen with user state.
   useEffect(() => {
@@ -138,8 +199,13 @@ function App() {
     // 2) Otherwise, fetch existing preferences (and the latest saved plan, so
     //    a returning user's tracking state is restored on reload).
     setIsCheckingPendingData(true);
-    Promise.all([getUserPreferences(user.id), getLatestPlan(user.id)])
-      .then(([existing, latestPlan]) => {
+    Promise.all([
+      getUserPreferences(user.id),
+      getLatestPlan(user.id),
+      getActivePassExpiry(),
+    ])
+      .then(([existing, latestPlan, expiry]) => {
+        setPassExpiry(expiry);
         if (existing) {
           setOnboardingData(existing);
           // Land on dashboard whenever we just signed in / page loaded with prefs.
@@ -204,18 +270,38 @@ function App() {
     }
   };
 
+  // Send the user to Stripe Checkout to buy one AI-plan credit.
+  const handleBuyPremium = async () => {
+    if (!user || isStartingCheckout) return;
+    setIsStartingCheckout(true);
+    try {
+      await startCheckout(
+        user.id,
+        user.primaryEmailAddress?.emailAddress || '',
+        region
+      );
+      // startCheckout redirects on success; nothing runs after this on success.
+    } catch (err) {
+      console.error('Error starting checkout:', err);
+      toast.error('Could not start checkout. Please try again.');
+      setIsStartingCheckout(false);
+    }
+  };
+
   const handleGenerateAIPlan = async () => {
     if (!onboardingData || isGeneratingAI) return;
-    if (!isPremium()) {
-      toast.info(
-        'AI plans are a premium feature. Enable dev access in Settings → Developer to try it.'
-      );
+    // No active pass → route to purchase instead of generating.
+    if (!hasPass) {
+      void handleBuyPremium();
       return;
     }
     setIsGeneratingAI(true);
     toast.info('Generating your AI plan — this can take 10–20 seconds.');
     try {
-      const plan = await generateAITrainingPlan(onboardingData);
+      // The RPC returns a token the function requires; the pass allows
+      // unlimited generations while active, so nothing is spent here.
+      const token = await claimGeneration();
+      const plan = await generateAITrainingPlan(onboardingData, token);
       setGeneratedPlan(plan);
       setCurrentScreen('training-plan');
       if (user) {
@@ -230,8 +316,13 @@ function App() {
       }
     } catch (err) {
       console.error('Error generating AI plan:', err);
-      const msg = err instanceof Error ? err.message : 'Failed to generate AI plan.';
+      const raw = err instanceof Error ? err.message : 'Failed to generate AI plan.';
+      const msg = raw.includes('no_active_pass')
+        ? 'Your AI season pass has expired. Buy a new one to keep generating.'
+        : raw;
       toast.error(msg);
+      // Pass may have lapsed; re-check so the button reflects reality.
+      await refreshPass();
     } finally {
       setIsGeneratingAI(false);
     }
@@ -386,6 +477,11 @@ function App() {
             onGeneratePlan={handleGeneratePlan}
             onGenerateAIPlan={handleGenerateAIPlan}
             isGeneratingAI={isGeneratingAI}
+            hasPass={hasPass}
+            passExpiry={passExpiry}
+            premiumPrice={config.seasonPrices[onboardingData.weeksAvailable]}
+            onBuyPremium={handleBuyPremium}
+            isStartingCheckout={isStartingCheckout}
             planId={currentPlanId}
             plan={generatedPlan}
             planStartedAt={currentPlanStartedAt}

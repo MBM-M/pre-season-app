@@ -16,6 +16,8 @@
 // deno-lint-ignore-file no-explicit-any
 // @ts-ignore — Deno-only import resolved by the edge runtime
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+// @ts-ignore — npm specifier resolved by the edge runtime
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -24,6 +26,8 @@ declare const Deno: {
 
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-4-5';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +62,37 @@ Deno.serve(async (req: Request) => {
   const data = payload?.onboardingData;
   if (!data || typeof data !== 'object') {
     return json({ error: 'Missing onboardingData' }, 400);
+  }
+
+  // ── Season-pass gate ─────────────────────────────────────────────────────
+  // AI generation requires a token issued by the claim_ai_generation() RPC,
+  // which only hands one out while the caller has a paid, unexpired pass. We
+  // re-validate the token here with the service role so the gate can't be
+  // bypassed from the browser. The pass allows unlimited generations while it's
+  // active, so the token is not consumed — only its pass's expiry matters.
+  const generationToken = payload?.generationToken;
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    return json({ error: 'Server is missing Supabase service credentials' }, 500);
+  }
+  if (!generationToken || typeof generationToken !== 'string') {
+    return json({ error: 'Missing generationToken' }, 402);
+  }
+
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  const { data: purchase, error: tokenErr } = await admin
+    .from('purchases')
+    .select('id')
+    .eq('generation_token', generationToken)
+    .eq('status', 'paid')
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  if (tokenErr) {
+    console.error('generate-premium-plan: token lookup failed', tokenErr);
+    return json({ error: 'Could not validate your purchase' }, 500);
+  }
+  if (!purchase) {
+    return json({ error: 'No active AI-plan season pass for this request' }, 402);
   }
 
   try {

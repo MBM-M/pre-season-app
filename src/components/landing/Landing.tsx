@@ -780,8 +780,11 @@ const Pricing = ({ onGetStarted }: { onGetStarted: () => void }) => {
               <div className="text-sm text-gray-400 mt-1">Claude-generated, structured</div>
             </div>
             <div className="text-right">
-              <div className="font-mono text-3xl font-bold">{config.premiumPrice}</div>
-              <div className="text-xs text-gray-500">{config.currencyCode} · one-off</div>
+              <div className="font-mono text-3xl font-bold">
+                <span className="text-base font-normal text-gray-400 mr-1">from</span>
+                {config.premiumFromPrice}
+              </div>
+              <div className="text-xs text-gray-500">{config.currencyCode} · per season</div>
             </div>
           </div>
           <ul className="space-y-2 mt-6 mb-8 text-sm text-gray-300">
@@ -799,11 +802,11 @@ const Pricing = ({ onGetStarted }: { onGetStarted: () => void }) => {
             </li>
             <li className="flex gap-2">
               <span className="text-purple-400">✓</span>
-              Re-generate as inputs change
+              Regenerate as often as you like, all season
             </li>
             <li className="flex gap-2">
               <span className="text-purple-400">✓</span>
-              One plan, your season — no subscription
+              One payment per season — longer seasons priced higher
             </li>
           </ul>
           <button
