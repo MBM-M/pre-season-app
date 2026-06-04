@@ -16,7 +16,11 @@ const PAGE_CONTAINER =
   'min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-gray-200';
 const INNER = 'max-w-3xl mx-auto px-4 sm:px-6 py-12';
 
-const LAST_UPDATED = 'May 2026';
+const LAST_UPDATED = 'June 2026';
+
+// TODO(legal): confirm your actual province of residence/operation before launch.
+// This drives the governing-law clause in the Terms of Service.
+const GOVERNING_PROVINCE = 'Ontario';
 
 const BackButton = ({ onBack }: { onBack: () => void }) => (
   <button
@@ -41,7 +45,8 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
       <p className="text-sm text-gray-500 mb-8">Last updated: {LAST_UPDATED}</p>
 
       <p className="leading-relaxed">
-        Pre-Season ("the app") is built and operated by Muhammad Bashir Mustafa. This
+        Pre-Season ("the app") is built and operated by Muhammad Bashir Mustafa, who is
+        the data controller for the purposes of UK and EU data protection law. This
         policy describes what we collect, why, where it lives, and how you control it.
       </p>
 
@@ -85,7 +90,9 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
         <li>
           <span className="text-white">Anthropic</span> — when you generate an AI plan,
           your onboarding inputs are sent to the Anthropic Claude API to produce the
-          plan, then discarded by Anthropic per their data retention policy.
+          plan. Anthropic does not use data submitted through its API to train its
+          models, and retains it only briefly for trust-and-safety purposes per its
+          commercial data policy.
         </li>
         <li>
           <span className="text-white">Stripe</span> — when you purchase the premium
@@ -113,6 +120,47 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
           Deletion is immediate and irreversible.
         </li>
       </ul>
+
+      <SectionHeading>How we protect it</SectionHeading>
+      <p>
+        All traffic between your device and our services is encrypted in transit over
+        HTTPS. Your records are protected by row-level security in the database, so each
+        account can only ever read or write its own rows. Authentication and payment
+        credentials are handled by Clerk and Stripe respectively and never stored on
+        our own servers.
+      </p>
+
+      <SectionHeading>How long we keep it</SectionHeading>
+      <p>
+        We retain your account data for as long as your account exists. When you delete
+        your account, every row tied to it is removed immediately, and copies in routine
+        encrypted backups age out within 30 days. Anonymous, aggregate counts that
+        cannot identify you may be retained.
+      </p>
+
+      <SectionHeading>Your rights</SectionHeading>
+      <p>
+        Depending on where you live (including under UK GDPR, EU GDPR, and Canada's
+        PIPEDA), you have the right to access, correct, export, and delete your personal
+        data, to object to or restrict certain processing, and to withdraw consent at
+        any time. The in-app Export and Delete tools cover access, portability, and
+        erasure directly; for anything else, email us. Our legal bases for processing
+        are the performance of our contract with you (providing the plans you request)
+        and your consent (for optional features such as AI generation). If you are in
+        the UK or EU and believe we have mishandled your data, you may also complain to
+        your local supervisory authority (in the UK, the Information Commissioner's
+        Office).
+      </p>
+
+      <SectionHeading>International data transfers</SectionHeading>
+      <p>
+        Your data is stored on Supabase infrastructure in the Canada/US region, and
+        processed by Clerk, Stripe, and Anthropic, which may operate in the United
+        States. If you access the app from the UK, EU, or elsewhere, your data is
+        transferred internationally. Where required, these transfers rely on appropriate
+        safeguards such as adequacy decisions or standard contractual clauses offered by
+        the relevant providers.
+      </p>
 
       <SectionHeading>Cookies</SectionHeading>
       <p>
@@ -185,10 +233,11 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
         AI-generated plans, using the Anthropic Claude API, for the length of that
         season; once the season elapses a new purchase is required. Payment is
         processed by Stripe; we do not store your card details. Access is granted
-        immediately upon purchase. Because this is a digital service delivered
-        immediately, the right of withdrawal does not apply once you have generated a
-        plan within the season; refund requests for technical failures will be
-        considered case-by-case via email.
+        immediately upon purchase. Where you have a statutory cooling-off right for
+        digital content (for example as a consumer in the UK or EU), you expressly
+        request that access begin immediately and acknowledge that you lose that right
+        once you generate a plan within the season. Refund requests for technical
+        failures will be considered case-by-case via email.
       </p>
 
       <SectionHeading>Account termination</SectionHeading>
@@ -204,6 +253,15 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
         The app is provided "as is" without warranty of any kind. To the maximum extent
         permitted by law, the operator is not liable for injury, loss, or damage
         arising from use of the app or from following any plan generated by it.
+      </p>
+
+      <SectionHeading>Governing law</SectionHeading>
+      <p>
+        These terms are governed by the laws of the Province of {GOVERNING_PROVINCE} and
+        the federal laws of Canada applicable therein, without regard to conflict-of-law
+        rules. The courts located in {GOVERNING_PROVINCE} have jurisdiction over any
+        dispute, except where mandatory consumer-protection laws in your country of
+        residence give you the right to bring proceedings locally.
       </p>
 
       <SectionHeading>Changes to these terms</SectionHeading>
