@@ -1,9 +1,11 @@
 /**
  * Privacy Policy and Terms of Service pages.
  *
- * These are functional placeholders intended to satisfy App Store review and
- * give users a clear summary of how their data is handled. Have a lawyer
- * review the wording before any commercial launch.
+ * Web-first product. These give users a clear, accurate summary of how their
+ * data is handled and the terms of the paid tier. Have a lawyer review the
+ * wording before commercial launch / marketing — see the TODO(legal) markers
+ * below for items that still need your decision (trader address, age threshold,
+ * marketing/analytics disclosures).
  */
 
 import { useRegion } from '@/contexts/RegionContext';
@@ -21,6 +23,16 @@ const LAST_UPDATED = 'June 2026';
 // TODO(legal): confirm your actual province of residence/operation before launch.
 // This drives the governing-law clause in the Terms of Service.
 const GOVERNING_PROVINCE = 'Ontario';
+
+// TODO(legal): UK/EU consumer law (Consumer Contracts Regulations) requires a
+// trader's geographic postal address, not just an email. Fill this in before
+// selling to UK/EU consumers. Left empty it simply doesn't render.
+const CONTACT_ADDRESS = '';
+
+// TODO(legal): 13 is the common minimum, but processing health data + payments
+// for EU users may require 16 (or verifiable parental consent below that). This
+// also affects who can use a youth-sport app, so it's a product decision too.
+const MIN_AGE = 13;
 
 const BackButton = ({ onBack }: { onBack: () => void }) => (
   <button
@@ -70,18 +82,29 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
         </li>
       </ul>
 
+      <SectionHeading>Health information</SectionHeading>
+      <p>
+        The injury details and fitness level you provide are information about your
+        health, which data protection law treats as a sensitive (special) category. We
+        ask for it only so the plan can avoid contraindicated exercises and match your
+        level, and we process it on the basis of your explicit consent, given when you
+        enter it during onboarding. If you generate an AI plan, these inputs are sent to
+        the Anthropic Claude API to produce that plan (see below). You can withdraw
+        consent at any time by deleting your account or removing the relevant answers.
+      </p>
+
       <SectionHeading>What we don't collect</SectionHeading>
       <p>
-        We do not collect device location, contacts, microphone, camera, health data, or
-        any third-party analytics identifiers. The app does not display advertising and
+        We do not collect device location, contacts, microphone, camera, or any
+        third-party analytics identifiers. The app does not display advertising and
         does not sell or share data with advertisers.
       </p>
 
       <SectionHeading>Where your data lives</SectionHeading>
       <ul className="space-y-2 list-disc list-inside text-gray-300">
         <li>
-          <span className="text-white">Supabase</span> (Postgres, hosted in the
-          Canada/US region) — onboarding answers, plans, and workout history.
+          <span className="text-white">Supabase</span> (Postgres, hosted in Canada,
+          region ca-central-1) — onboarding answers, plans, and workout history.
         </li>
         <li>
           <span className="text-white">Clerk</span> — authentication and your email
@@ -154,15 +177,18 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
 
       <SectionHeading>International data transfers</SectionHeading>
       <p>
-        Your data is stored on Supabase infrastructure in the Canada/US region, and
-        processed by Clerk, Stripe, and Anthropic, which may operate in the United
-        States. If you access the app from the UK, EU, or elsewhere, your data is
+        Your data is stored on Supabase infrastructure in Canada, and processed by
+        Clerk, Stripe, and Anthropic, which may operate in the United States. If you access the app from the UK, EU, or elsewhere, your data is
         transferred internationally. Where required, these transfers rely on appropriate
         safeguards such as adequacy decisions or standard contractual clauses offered by
         the relevant providers.
       </p>
 
       <SectionHeading>Cookies</SectionHeading>
+      {/* TODO(legal): if you add analytics/marketing tooling (Vercel Analytics, GA,
+          Plausible, ad pixels) or send marketing email, update this section, the
+          "What we don't collect" claim, and "How we use it" — and add an EU cookie
+          consent banner for any non-essential cookies. */}
       <p>
         Clerk sets a small number of essential cookies to keep you signed in. We do not
         use analytics, marketing, or advertising cookies.
@@ -170,14 +196,22 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
 
       <SectionHeading>Children</SectionHeading>
       <p>
-        The app is not directed at children under 13. If you are under 13, please do
-        not create an account.
+        The app is not directed at children under {MIN_AGE}. If you are under {MIN_AGE},
+        please do not create an account. Where local law sets a higher age for consenting
+        to data processing, that age applies.
+      </p>
+
+      <SectionHeading>Changes to this policy</SectionHeading>
+      <p>
+        We may update this policy as the app evolves. When changes are material, we will
+        update the "Last updated" date above and, where appropriate, notify you in the
+        app. Continued use after an update means you accept the revised policy.
       </p>
 
       <SectionHeading>Contact</SectionHeading>
       <p>
         For privacy questions or to request deletion outside of the in-app flow, email
-        preseason.app.help@gmail.com.
+        preseason.app.help@gmail.com{CONTACT_ADDRESS ? ` or write to ${CONTACT_ADDRESS}` : ''}.
       </p>
     </div>
   </div>
@@ -206,6 +240,14 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
         a server-side call to a large language model (premium). The app helps you
         organize and track training; it is not a substitute for professional coaching,
         medical advice, or supervised strength and conditioning.
+      </p>
+
+      <SectionHeading>Eligibility</SectionHeading>
+      <p>
+        You must be at least {MIN_AGE} years old (or older where your local law requires
+        a higher age to consent to data processing or to enter a contract) and able to
+        form a binding agreement to use the app. By using it you confirm that you meet
+        this requirement.
       </p>
 
       <SectionHeading>Health disclaimer</SectionHeading>
@@ -250,9 +292,14 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
 
       <SectionHeading>Liability</SectionHeading>
       <p>
-        The app is provided "as is" without warranty of any kind. To the maximum extent
-        permitted by law, the operator is not liable for injury, loss, or damage
-        arising from use of the app or from following any plan generated by it.
+        The app is provided "as is." Nothing in these terms excludes or limits our
+        liability for death or personal injury caused by our negligence, for fraud or
+        fraudulent misrepresentation, or for anything else that cannot be excluded under
+        applicable law, and nothing here affects your statutory rights as a consumer.
+        Subject to that, and to the maximum extent permitted by law, the operator is not
+        liable for indirect or consequential loss, or for injury, loss, or damage arising
+        from your use of the app or from following any plan where you have not followed
+        the health guidance above or have trained beyond your medically cleared capacity.
       </p>
 
       <SectionHeading>Governing law</SectionHeading>
@@ -272,7 +319,7 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
 
       <SectionHeading>Contact</SectionHeading>
       <p>
-        Questions or disputes: preseason.app.help@gmail.com.
+        Questions or disputes: preseason.app.help@gmail.com{CONTACT_ADDRESS ? `, or ${CONTACT_ADDRESS}` : ''}.
       </p>
     </div>
   </div>
