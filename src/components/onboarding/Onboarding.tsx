@@ -44,12 +44,14 @@ export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps
     equipment: Equipment[];
     injury: InjuryArea;
     injuryDetails?: string;
+    healthConsent: boolean;
     goal?: PrimaryGoal;
   }>({
     // Seeded from auto-detection; the user can correct it later in Settings.
     region: detectedRegion,
     equipment: [],
     injury: 'none',
+    healthConsent: false,
   });
 
   const canGoNext = () => {
@@ -59,7 +61,7 @@ export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps
       case 2: return !!formData.weeksAvailable;
       case 3: return !!formData.daysPerWeek;
       case 4: return formData.equipment.length > 0;
-      case 5: return !!formData.injury;
+      case 5: return !!formData.injury && formData.healthConsent;
       case 6: return !!formData.goal;
       default: return false;
     }
@@ -141,8 +143,10 @@ export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps
           <Step6_Injuries
             selected={formData.injury}
             injuryDetails={formData.injuryDetails || ''}
+            consent={formData.healthConsent}
             onSelect={(injury) => setFormData({ ...formData, injury })}
             onDetailsChange={(details) => setFormData({ ...formData, injuryDetails: details })}
+            onConsentChange={(healthConsent) => setFormData({ ...formData, healthConsent })}
           />
         );
       case 6:

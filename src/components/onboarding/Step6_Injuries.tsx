@@ -5,11 +5,16 @@ import { EducationCard } from '@/components/ui/EducationCard';
 interface Step6InjuriesProps {
   selected: InjuryArea;
   injuryDetails: string;
+  // Consent is collected during onboarding only. When these are omitted (e.g.
+  // editing prefs in Settings, where consent was already given), the checkbox
+  // is not shown.
+  consent?: boolean;
   onSelect: (area: InjuryArea) => void;
   onDetailsChange: (details: string) => void;
+  onConsentChange?: (consent: boolean) => void;
 }
 
-export const Step6_Injuries = ({ selected, injuryDetails, onSelect, onDetailsChange }: Step6InjuriesProps) => {
+export const Step6_Injuries = ({ selected, injuryDetails, consent, onSelect, onDetailsChange, onConsentChange }: Step6InjuriesProps) => {
   const showDetails = selected === 'other';
 
   return (
@@ -54,6 +59,24 @@ export const Step6_Injuries = ({ selected, injuryDetails, onSelect, onDetailsCha
         content="Research shows that modified training can maintain and even improve fitness while recovering from injuries. Studies in sports medicine demonstrate that athletes who adapt their training around injuries maintain 70-80% of their fitness gains and recover faster than those who stop completely. Your plan will include appropriate modifications — such as alternative exercises, reduced intensity, or targeted rehabilitation movements — to help you train safely while still making progress."
         source="British Journal of Sports Medicine, 2021; Physical Therapy in Sport, 2022"
       />
+
+      {onConsentChange && (
+        <label className="mt-6 flex items-start gap-3 p-4 bg-gray-900/60 border border-gray-700 rounded-xl cursor-pointer hover:border-gray-600 transition">
+          <input
+            type="checkbox"
+            checked={!!consent}
+            onChange={(e) => onConsentChange(e.target.checked)}
+            className="mt-1 h-5 w-5 shrink-0 accent-emerald-500"
+          />
+          <span className="text-sm text-gray-300 leading-relaxed">
+            I consent to Pre-Season processing my fitness level and injury information —
+            which is health-related data — to personalize my training plan, including
+            sending it to our AI provider (Anthropic) when I generate an AI plan. I can
+            withdraw this consent at any time by deleting my account. See our Privacy
+            Policy for details.
+          </span>
+        </label>
+      )}
     </div>
   );
 };
