@@ -177,7 +177,7 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
       <SectionHeading>Contact</SectionHeading>
       <p>
         For privacy questions or to request deletion outside of the in-app flow, email
-        muhammadbm.01@gmail.com.
+        preseason.app.help@gmail.com.
       </p>
     </div>
   </div>
@@ -272,7 +272,7 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
 
       <SectionHeading>Contact</SectionHeading>
       <p>
-        Questions or disputes: muhammadbm.01@gmail.com.
+        Questions or disputes: preseason.app.help@gmail.com.
       </p>
     </div>
   </div>

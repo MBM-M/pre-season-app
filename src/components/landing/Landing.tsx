@@ -911,7 +911,7 @@ const Footer = ({
           Terms
         </button>
         <a
-          href="mailto:muhammadbm.01@gmail.com"
+          href="mailto:preseason.app.help@gmail.com"
           className="hover:text-white transition"
         >
           Contact
