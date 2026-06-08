@@ -131,6 +131,14 @@ export const PrivacyPolicy = ({ onBack }: LegalProps) => (
         outside of strictly transactional sign-up/sign-in flows.
       </p>
 
+      <SectionHeading>Automated plan generation</SectionHeading>
+      <p>
+        When you choose an AI plan, it is produced automatically by a large language
+        model from the inputs you provide. This generates a training plan only — it does
+        not make decisions that have legal or similarly significant effects on you, and a
+        plan is only ever generated at your request.
+      </p>
+
       <SectionHeading>Your controls</SectionHeading>
       <ul className="space-y-2 list-disc list-inside text-gray-300">
         <li>
@@ -290,6 +298,14 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
         credentials).
       </p>
 
+      <SectionHeading>Intellectual property</SectionHeading>
+      <p>
+        The app, its content, its plan-generation logic, and its branding are owned by
+        the operator and protected by intellectual-property law. You may use the plans
+        we generate for your own personal training. You may not copy, resell,
+        redistribute, scrape, or reverse-engineer the app or its underlying systems.
+      </p>
+
       <SectionHeading>Liability</SectionHeading>
       <p>
         The app is provided "as is." Nothing in these terms excludes or limits our
@@ -315,6 +331,15 @@ export const TermsOfService = ({ onBack }: LegalProps) => {
       <p>
         We may update these terms when material features change. Continued use of the
         app after an update constitutes acceptance of the revised terms.
+      </p>
+
+      <SectionHeading>General</SectionHeading>
+      <p>
+        If any provision of these terms is found to be unenforceable, the remaining
+        provisions stay in full effect. Our failure to enforce a term is not a waiver of
+        it. You may not transfer your rights under these terms; we may assign ours to a
+        successor, for example on a sale of the business. Together with the Privacy
+        Policy, these terms are the entire agreement between you and us regarding the app.
       </p>
 
       <SectionHeading>Contact</SectionHeading>
