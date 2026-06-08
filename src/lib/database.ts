@@ -24,6 +24,7 @@ interface UserPreferencesRow {
   injury_details: string | null;
   goal: PrimaryGoal;
   season_start_date: string | null;
+  health_consent_at: string | null;
 }
 
 function rowToOnboardingData(row: UserPreferencesRow): OnboardingData {
@@ -39,6 +40,7 @@ function rowToOnboardingData(row: UserPreferencesRow): OnboardingData {
     injuryDetails: row.injury_details ?? undefined,
     goal: row.goal,
     seasonStartDate: row.season_start_date ?? undefined,
+    healthConsentAt: row.health_consent_at ?? undefined,
   };
 }
 
@@ -95,6 +97,7 @@ export async function saveUserPreferences(
         injury_details: preferences.injuryDetails,
         goal: preferences.goal,
         season_start_date: preferences.seasonStartDate || null,
+        health_consent_at: preferences.healthConsentAt ?? null,
       },
       { onConflict: 'user_id' }
     )

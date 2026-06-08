@@ -28,6 +28,9 @@ export interface OnboardingData {
   injuryDetails?: string;
   goal: PrimaryGoal;
   seasonStartDate?: string;
+  // ISO timestamp of when the user gave explicit consent to process their
+  // health-related (fitness + injury) data. Set at onboarding completion.
+  healthConsentAt?: string;
 }
 
 export const SPORTS: { value: Sport; label: string; emoji: string; available: boolean }[] = [

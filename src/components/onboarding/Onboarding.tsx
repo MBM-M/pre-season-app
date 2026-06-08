@@ -70,7 +70,9 @@ export const Onboarding = ({ onComplete, onSignIn, isSignedIn }: OnboardingProps
   const handleNext = () => {
     if (canGoNext()) {
       if (currentStep === STEPS.length - 1) {
-        onComplete(formData as OnboardingData);
+        // Consent is required to reach this point (gated at the injuries step),
+        // so record when it was given for accountability.
+        onComplete({ ...formData, healthConsentAt: new Date().toISOString() } as OnboardingData);
       } else {
         setDirection(1);
         setCurrentStep((prev) => prev + 1);
