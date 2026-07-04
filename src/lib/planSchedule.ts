@@ -1,4 +1,5 @@
 import { TrainingPlan } from '@/lib/planGenerator';
+import { SessionCompletion } from '@/lib/database';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -58,4 +59,55 @@ export function getPlanProgress(
   }
 
   return { daysSinceStart, totalWeeks, currentWeek, isComplete, nextSession };
+}
+
+export interface StreakInfo {
+  /**
+   * Consecutive plan-weeks with at least one logged session, counting back
+   * from the current week. The in-progress current week extends the streak
+   * when it has a completion but never breaks it (the week isn't over yet).
+   */
+  weekStreak: number;
+  /** Sessions logged in the current plan week. */
+  sessionsThisWeek: number;
+  /** Sessions scheduled in the current plan week. */
+  plannedThisWeek: number;
+  /** Weeks (before the current one) where every scheduled session was logged. */
+  perfectWeeks: number;
+}
+
+/**
+ * Derive streak stats from completion rows. Streaks are measured in plan-weeks
+ * rather than calendar days — plans schedule 2–5 sessions a week, so a daily
+ * streak would break on every planned rest day.
+ */
+export function getStreakInfo(
+  completions: SessionCompletion[],
+  plan: TrainingPlan,
+  currentWeek: number
+): StreakInfo {
+  const byWeek = new Map<number, number>();
+  for (const c of completions) {
+    byWeek.set(c.weekNumber, (byWeek.get(c.weekNumber) ?? 0) + 1);
+  }
+
+  const sessionsThisWeek = byWeek.get(currentWeek) ?? 0;
+  const plannedThisWeek =
+    plan.weeks.find((w) => w.weekNumber === currentWeek)?.sessions.length ?? 0;
+
+  let weekStreak = sessionsThisWeek > 0 ? 1 : 0;
+  for (let w = currentWeek - 1; w >= 1; w--) {
+    if ((byWeek.get(w) ?? 0) > 0) weekStreak += 1;
+    else break;
+  }
+
+  let perfectWeeks = 0;
+  for (const week of plan.weeks) {
+    if (week.weekNumber >= currentWeek) continue;
+    if ((byWeek.get(week.weekNumber) ?? 0) >= week.sessions.length && week.sessions.length > 0) {
+      perfectWeeks += 1;
+    }
+  }
+
+  return { weekStreak, sessionsThisWeek, plannedThisWeek, perfectWeeks };
 }

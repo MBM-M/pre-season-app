@@ -11,8 +11,10 @@ import {
   FOOTBALL_POSITIONS,
 } from '@/types/onboarding';
 import { TrainingPlan } from '@/lib/planGenerator';
-import { getCompletions } from '@/lib/database';
-import { getPlanProgress } from '@/lib/planSchedule';
+import { getCompletions, SessionCompletion } from '@/lib/database';
+import { getPlanProgress, getStreakInfo } from '@/lib/planSchedule';
+import { shareProgressCard } from '@/lib/shareCard';
+import { useToast } from '@/components/ui/Toast';
 
 interface DashboardProps {
   userData: OnboardingData;
@@ -63,7 +65,13 @@ export const Dashboard = ({
   const regionInfo = REGIONS.find(r => r.value === userData.region);
   const fitnessInfo = FITNESS_LEVELS.find(f => f.value === userData.fitnessLevel);
 
-  const [completed, setCompleted] = useState<Set<string>>(new Set());
+  const toast = useToast();
+  const [completions, setCompletions] = useState<SessionCompletion[]>([]);
+  const [isSharing, setIsSharing] = useState(false);
+  const completed = useMemo(
+    () => new Set(completions.map((r) => `${r.weekNumber}-${r.day}`)),
+    [completions]
+  );
 
   useEffect(() => {
     // No plan → widget doesn't render anyway; initial useState() is correct.
@@ -72,7 +80,7 @@ export const Dashboard = ({
     getCompletions(planId)
       .then((rows) => {
         if (cancelled) return;
-        setCompleted(new Set(rows.map((r) => `${r.weekNumber}-${r.day}`)));
+        setCompletions(rows);
       })
       .catch((err) => {
         console.error('Error loading completions for dashboard widget:', err);
@@ -97,6 +105,40 @@ export const Dashboard = ({
     if (!plan || !planStartedAt) return null;
     return getPlanProgress(planStartedAt, plan, completed);
   }, [plan, planStartedAt, completed]);
+
+  const streaks = useMemo(() => {
+    if (!plan || !progress) return null;
+    return getStreakInfo(completions, plan, progress.currentWeek);
+  }, [plan, progress, completions]);
+
+  const currentPhase = useMemo(() => {
+    if (!plan || !progress) return null;
+    return plan.weeks[progress.currentWeek - 1]?.focus ?? null;
+  }, [plan, progress]);
+
+  const handleShareProgress = async () => {
+    if (!plan || !progress || isSharing) return;
+    setIsSharing(true);
+    try {
+      const outcome = await shareProgressCard({
+        completedCount,
+        totalSessions,
+        completionPct,
+        currentWeek: progress.currentWeek,
+        totalWeeks: progress.totalWeeks,
+        phase: currentPhase ?? 'Foundation',
+        weekStreak: streaks?.weekStreak ?? 0,
+      });
+      if (outcome === 'downloaded') {
+        toast.success('Progress card saved — post it to your story.');
+      }
+    } catch (err) {
+      console.error('Error sharing progress card:', err);
+      toast.error('Could not create your progress card. Please try again.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   return (
     <motion.div
@@ -196,6 +238,32 @@ export const Dashboard = ({
                 transition={{ type: 'spring', stiffness: 120, damping: 20 }}
                 className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400"
               />
+            </div>
+
+            {/* Streak chips + share */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {streaks && streaks.weekStreak > 0 && (
+                <span className="text-xs font-mono px-3 py-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
+                  🔥 {streaks.weekStreak}-week streak
+                </span>
+              )}
+              {streaks && streaks.plannedThisWeek > 0 && (
+                <span className="text-xs font-mono px-3 py-1.5 rounded-full border border-gray-700 bg-gray-800/60 text-gray-300">
+                  This week: {streaks.sessionsThisWeek}/{streaks.plannedThisWeek}
+                </span>
+              )}
+              {currentPhase && (
+                <span className="text-xs font-mono px-3 py-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 uppercase">
+                  {currentPhase} phase
+                </span>
+              )}
+              <button
+                onClick={handleShareProgress}
+                disabled={isSharing}
+                className="ml-auto text-xs font-semibold px-4 py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition disabled:opacity-60"
+              >
+                {isSharing ? 'Creating…' : 'Share progress 📤'}
+              </button>
             </div>
           </div>
         </motion.div>

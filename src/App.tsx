@@ -6,6 +6,7 @@ import { PrivacyPolicy, TermsOfService } from '@/components/legal/Legal';
 import { Confirmation } from '@/components/onboarding/Confirmation';
 import { ImprovementVision } from '@/components/onboarding/ImprovementVision';
 import { Dashboard } from '@/components/dashboard/Dashboard';
+import { RegenUpsellModal } from '@/components/dashboard/RegenUpsellModal';
 import { TrainingPlanDisplay } from '@/components/dashboard/TrainingPlan';
 import { Settings } from '@/components/settings/Settings';
 import { Header, HeaderScreen } from '@/components/layout/Header';
@@ -55,6 +56,7 @@ function App() {
   const [passExpiry, setPassExpiry] = useState<string | null>(null);
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [pendingCheckout, setPendingCheckout] = useState(false);
+  const [showRegenUpsell, setShowRegenUpsell] = useState(false);
 
   const hasPass = !!passExpiry;
 
@@ -253,7 +255,8 @@ function App() {
     await persistOnboarding(onboardingData);
   };
 
-  const handleGeneratePlan = async () => {
+  /** Actually build + save a free plan (no upsell gate). */
+  const doGeneratePlan = async () => {
     if (!onboardingData || !user) return;
     const plan = generateTrainingPlan(onboardingData);
     setGeneratedPlan(plan);
@@ -268,6 +271,20 @@ function App() {
       console.error('Error auto-saving plan:', err);
       toast.error("Generated plan, but couldn't save it for tracking. Refresh and try again.");
     }
+  };
+
+  /**
+   * Generate a free plan — but if this is a *re*generation by a user without
+   * a pass, pause on an upsell first. That's the moment their current plan
+   * stopped fitting, which is exactly what the season pass solves.
+   */
+  const handleGeneratePlan = async () => {
+    if (!onboardingData || !user) return;
+    if (generatedPlan && !hasPass) {
+      setShowRegenUpsell(true);
+      return;
+    }
+    await doGeneratePlan();
   };
 
   // Send the user to Stripe Checkout to buy one AI-plan credit.
@@ -488,6 +505,17 @@ function App() {
             onViewPlan={() => setCurrentScreen('training-plan')}
           />
         </div>
+        <RegenUpsellModal
+          open={showRegenUpsell}
+          premiumPrice={config.seasonPrices[onboardingData.weeksAvailable]}
+          isStartingCheckout={isStartingCheckout}
+          onBuyPass={() => void handleBuyPremium()}
+          onRegenerateFree={() => {
+            setShowRegenUpsell(false);
+            void doGeneratePlan();
+          }}
+          onClose={() => setShowRegenUpsell(false)}
+        />
       </div>
     );
   }
